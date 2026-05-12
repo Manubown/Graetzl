@@ -73,7 +73,6 @@ export function ViennaMap() {
         // GDPR: location is consulted client-side only to centre the map.
         // We never transmit the user's coordinates server-side.
         trackUserLocation: false,
-        showUserHeading: false,
       }),
       "top-right",
     );

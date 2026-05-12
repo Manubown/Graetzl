@@ -54,8 +54,7 @@ create table if not exists public.pins (
 comment on table public.pins is
   'A user-curated point of interest. Non-commercial content only — see Terms.';
 comment on column public.pins.precision is
-  'exact = stored coordinate matches the user-selected location. ' ||
-  'approximate = client snapped to ~100m grid before write (GDPR).';
+  'exact = stored coordinate matches the user-selected location. approximate = client snapped to ~100m grid before write (GDPR).';
 
 -- Critical spatial index for nearby-pin lookups.
 create index if not exists pins_location_gix
