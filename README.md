@@ -1,4 +1,4 @@
-# Grätzl
+# Grätzl — the anti-TripAdvisor, a non-commercial locally-curated city map. Launching in Vienna.
 
 > The anti-TripAdvisor. A non-commercial, locally-curated map of cities —
 > residents drop pins about places only locals know, visitors discover the
