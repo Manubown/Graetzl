@@ -1,18 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Pin } from "@/lib/pins/types";
+import type { PinWithStats } from "@/lib/pins/types";
 import { CATEGORIES } from "@/lib/pins/constants";
+import { PinActions } from "./pin-actions";
 
 interface PinDetailProps {
-  pin: Pin;
+  pin: PinWithStats;
 }
 
-/**
- * Visual representation of a single pin. Used both standalone
- * (in /pin/[id]) and inside a modal (via the intercepting route).
- *
- * Server-renderable; no client hooks here.
- */
 export function PinDetail({ pin }: PinDetailProps) {
   const category = CATEGORIES.find((c) => c.value === pin.category);
   const created = new Date(pin.created_at);
@@ -50,6 +45,13 @@ export function PinDetail({ pin }: PinDetailProps) {
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
         {pin.body}
       </p>
+
+      <PinActions
+        pinId={pin.id}
+        initialUpvoteCount={pin.upvote_count}
+        initialHasUpvoted={pin.has_upvoted}
+        initialHasSaved={pin.has_saved}
+      />
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
         <div>

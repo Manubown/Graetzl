@@ -1,0 +1,121 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Heart, Bookmark } from "lucide-react";
+import { toggleUpvote, toggleSave } from "@/lib/pins/actions";
+import { cn } from "@/lib/utils";
+
+interface PinActionsProps {
+  pinId: string;
+  initialUpvoteCount: number;
+  initialHasUpvoted: boolean;
+  initialHasSaved: boolean;
+}
+
+/**
+ * Heart (upvote, public count) + Bookmark (save, private).
+ * Optimistically updates on click; reverts + shows a toast on error.
+ */
+export function PinActions({
+  pinId,
+  initialUpvoteCount,
+  initialHasUpvoted,
+  initialHasSaved,
+}: PinActionsProps) {
+  const [upvoteCount, setUpvoteCount] = useState(initialUpvoteCount);
+  const [upvoted, setUpvoted] = useState(initialHasUpvoted);
+  const [saved, setSaved] = useState(initialHasSaved);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingUpvote, startUpvote] = useTransition();
+  const [pendingSave, startSave] = useTransition();
+
+  function handleUpvote() {
+    setError(null);
+    const prevUpvoted = upvoted;
+    const prevCount = upvoteCount;
+    // Optimistic
+    setUpvoted(!prevUpvoted);
+    setUpvoteCount(prevCount + (prevUpvoted ? -1 : 1));
+
+    startUpvote(async () => {
+      const result = await toggleUpvote(pinId);
+      if (!result.ok) {
+        // Revert
+        setUpvoted(prevUpvoted);
+        setUpvoteCount(prevCount);
+        setError(result.error);
+      } else {
+        // Server may disagree (e.g. row already existed) — trust it.
+        setUpvoted(result.active);
+      }
+    });
+  }
+
+  function handleSave() {
+    setError(null);
+    const prevSaved = saved;
+    setSaved(!prevSaved);
+
+    startSave(async () => {
+      const result = await toggleSave(pinId);
+      if (!result.ok) {
+        setSaved(prevSaved);
+        setError(result.error);
+      } else {
+        setSaved(result.active);
+      }
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleUpvote}
+        disabled={pendingUpvote}
+        aria-pressed={upvoted}
+        aria-label={upvoted ? "Upvote entfernen" : "Upvoten"}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-60",
+          upvoted
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border bg-background hover:bg-muted",
+        )}
+      >
+        <Heart
+          className={cn("h-4 w-4", upvoted && "fill-current")}
+          strokeWidth={2}
+        />
+        <span className="tabular-nums">{upvoteCount}</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={pendingSave}
+        aria-pressed={saved}
+        aria-label={saved ? "Speichern entfernen" : "Pin speichern"}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-60",
+          saved
+            ? "border-accent bg-accent text-accent-foreground"
+            : "border-border bg-background hover:bg-muted",
+        )}
+      >
+        <Bookmark
+          className={cn("h-4 w-4", saved && "fill-current")}
+          strokeWidth={2}
+        />
+        <span className="hidden sm:inline">
+          {saved ? "Gespeichert" : "Speichern"}
+        </span>
+      </button>
+
+      {error && (
+        <span className="ml-1 text-xs text-primary" role="alert">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}

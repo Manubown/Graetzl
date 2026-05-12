@@ -22,13 +22,12 @@ export type CreatePinResult =
   | { ok: true; pinId: string }
   | { ok: false; error: string };
 
+export type ToggleResult =
+  | { ok: true; active: boolean }
+  | { ok: false; error: string };
+
 /**
- * Validate + create a pin.
- *
- * Inputs come in as FormData so the same Action can be called from a
- * vanilla <form action={...}>. RLS on `pins` ensures the row's
- * `author_id` matches `auth.uid()`; we set it explicitly here for
- * clarity.
+ * Validate + create a pin. See drop-pin-modal for the calling code.
  */
 export async function createPin(formData: FormData): Promise<CreatePinResult> {
   const supabase = await createClient();
@@ -50,7 +49,6 @@ export async function createPin(formData: FormData): Promise<CreatePinResult> {
   const latRaw = Number(formData.get("lat"));
   const photoUrl = String(formData.get("photo_url") ?? "").trim() || null;
 
-  // --- Validation ----------------------------------------------------
   if (title.length < 1 || title.length > 80) {
     return { ok: false, error: "Titel muss 1–80 Zeichen lang sein." };
   }
@@ -69,17 +67,13 @@ export async function createPin(formData: FormData): Promise<CreatePinResult> {
   if (!Number.isFinite(lngRaw) || !Number.isFinite(latRaw)) {
     return { ok: false, error: "Ungültige Koordinaten." };
   }
-  // Vienna bbox sanity check — refuse pins outside the launch city.
   if (
-    lngRaw < 16.18 ||
-    lngRaw > 16.58 ||
-    latRaw < 48.10 ||
-    latRaw > 48.33
+    lngRaw < 16.18 || lngRaw > 16.58 ||
+    latRaw < 48.10 || latRaw > 48.33
   ) {
     return { ok: false, error: "Pin liegt außerhalb von Wien." };
   }
 
-  // --- Coordinate handling ------------------------------------------
   let lng = lngRaw;
   let lat = latRaw;
   if (precision === "approximate") {
@@ -88,18 +82,13 @@ export async function createPin(formData: FormData): Promise<CreatePinResult> {
     lng = snapped.lng;
   }
 
-  // PostGIS accepts SRID-tagged WKT for geography insertion.
   const locationWkt = `SRID=4326;POINT(${lng} ${lat})`;
 
-  // --- Insert -------------------------------------------------------
   const { data, error } = await supabase
     .from("pins")
     .insert({
       author_id: user.id,
-      title,
-      body,
-      category,
-      language,
+      title, body, category, language,
       location: locationWkt,
       precision,
       photo_url: photoUrl,
@@ -115,20 +104,103 @@ export async function createPin(formData: FormData): Promise<CreatePinResult> {
     };
   }
 
-  // Invalidate the home page cache so the new pin appears on the map.
   revalidatePath("/");
-
   return { ok: true, pinId: data.id };
 }
 
-/**
- * Convenience for <form action={createPinAndRedirect}>. Calls
- * createPin, then either redirects to the new pin or throws.
- */
 export async function createPinAndRedirect(formData: FormData) {
   const result = await createPin(formData);
-  if (!result.ok) {
-    throw new Error(result.error);
-  }
+  if (!result.ok) throw new Error(result.error);
   redirect(`/pin/${result.pinId}`);
+}
+
+/**
+ * Toggle the current user's upvote on a pin.
+ *
+ * Returns the new active state. RLS forbids self-upvotes via the
+ * `upvotes_insert_self_not_self_pin` policy (Week 1 migration).
+ */
+export async function toggleUpvote(pinId: string): Promise<ToggleResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Bitte zuerst anmelden." };
+
+  // Probe current state — cheaper than upsert + select.
+  const { data: existing, error: probeErr } = await supabase
+    .from("upvotes")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .eq("pin_id", pinId)
+    .maybeSingle();
+  if (probeErr) {
+    return { ok: false, error: probeErr.message };
+  }
+
+  if (existing) {
+    const { error } = await supabase
+      .from("upvotes")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("pin_id", pinId);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/pin/${pinId}`);
+    return { ok: true, active: false };
+  }
+
+  const { error } = await supabase
+    .from("upvotes")
+    .insert({ user_id: user.id, pin_id: pinId });
+  if (error) {
+    // The "not self pin" policy returns a 403; surface a friendlier message.
+    if (error.message.toLowerCase().includes("row-level security")) {
+      return {
+        ok: false,
+        error: "Eigene Pins können nicht hochgevotet werden.",
+      };
+    }
+    return { ok: false, error: error.message };
+  }
+  revalidatePath(`/pin/${pinId}`);
+  return { ok: true, active: true };
+}
+
+/**
+ * Toggle the current user's save on a pin. Saves are private (RLS).
+ */
+export async function toggleSave(pinId: string): Promise<ToggleResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Bitte zuerst anmelden." };
+
+  const { data: existing, error: probeErr } = await supabase
+    .from("saves")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .eq("pin_id", pinId)
+    .maybeSingle();
+  if (probeErr) {
+    return { ok: false, error: probeErr.message };
+  }
+
+  if (existing) {
+    const { error } = await supabase
+      .from("saves")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("pin_id", pinId);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/pin/${pinId}`);
+    return { ok: true, active: false };
+  }
+
+  const { error } = await supabase
+    .from("saves")
+    .insert({ user_id: user.id, pin_id: pinId });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/pin/${pinId}`);
+  return { ok: true, active: true };
 }

@@ -1,9 +1,5 @@
 import type { Category, Precision } from "@/lib/supabase/database.types";
 
-/**
- * Pin as we deal with it client- and server-side.
- * Mirrors the `public.pins_with_coords` view.
- */
 export interface Pin {
   id: string;
   author_id: string | null;
@@ -21,7 +17,13 @@ export interface Pin {
   lat: number;
 }
 
-/** Vienna's max bounds — matches the map's maxBounds config. */
+export interface PinWithStats extends Pin {
+  upvote_count: number;
+  save_count: number;
+  has_upvoted: boolean;
+  has_saved: boolean;
+}
+
 export const VIENNA_BBOX = {
   minLng: 16.18,
   minLat: 48.10,
