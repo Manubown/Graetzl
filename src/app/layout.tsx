@@ -21,10 +21,18 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+/**
+ * Root layout. Receives both the regular `children` slot and the
+ * `@modal` parallel slot used for intercepting routes (pin detail
+ * modal). When no intercept is active, the modal slot renders its
+ * default (null) so nothing visual changes.
+ */
 export default function RootLayout({
   children,
+  modal,
 }: Readonly<{
   children: React.ReactNode;
+  modal: React.ReactNode;
 }>) {
   return (
     <html
@@ -35,6 +43,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
+        {modal}
       </body>
     </html>
   );

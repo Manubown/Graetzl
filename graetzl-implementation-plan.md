@@ -113,14 +113,14 @@ The thing that has to exist before anyone sees it.
 - [x] Basic layout shell (Tailwind v4; shadcn primitives added on-demand)
 - [x] **Done when:** you can log in and see an empty map of Vienna ← achieved
 
-#### Week 2 — Core loop
-- [ ] Drop-pin UX: long-press on map → modal with title / body / category / language / precision toggle
-- [ ] Photo upload to Supabase Storage
-- [ ] Sharp EXIF strip on upload (server-side function)
-- [ ] Pin detail view (modal or `/pin/[id]` page)
-- [ ] Render existing pins as markers, clustered when zoomed out
-- [ ] Approximate precision: snap coords to 100m grid before write
-- [ ] **Done when:** you can create, view, and read pins on the map
+#### Week 2 — Core loop ✅ DONE (session 3)
+- [x] Drop-pin UX: long-press on map (450ms + 6px tolerance) → modal with title / body / category / language / precision toggle. Right-click as desktop shortcut.
+- [x] Photo upload to Supabase Storage (public `pin-photos` bucket, `<uid>/<uuid>.webp` paths, RLS-gated inserts)
+- [x] Sharp EXIF strip on upload — `/api/upload` route handler strips ALL metadata, resizes to ≤2000px, re-encodes as WebP @ q82
+- [x] Pin detail view — full `/pin/[id]` page **and** intercepting modal via parallel `@modal` slot. Deep links fall through to the full page with OG metadata.
+- [x] Render existing pins as MapLibre cluster + symbol layers. (Cluster counts use circle size + colour ramp, no text labels — we deliberately don't pull glyphs from a third-party font CDN; Phase 2's self-hosted Protomaps will bring labels back.)
+- [x] Approximate precision: snap coords to ~100m grid before write. `snapTo100mGrid` snaps lat first, then derives lng step from snapped lat so points in the same band always collide. Verified with random sampling: ≥70% of <30m-apart points collide, 100% of >200m-apart points separate.
+- [x] **Done when:** you can create, view, and read pins on the map ← achieved
 
 #### Week 3 — Social + moderation
 - [ ] Upvote a pin (toggle)
@@ -278,27 +278,58 @@ Only after Vienna proves out (target: 2,000+ weekly active users, 5,000+ pins).
 
 ## 8. Open questions
 
-- [ ] Final mascot direction (pigeon vs. abstract character vs. user-selected base)
-- [ ] Domain availability check
+- [ ] Domain availability check (graetzl.app / graetzl.eu / getgraetzl.com)
 - [ ] Trademark search for "Grätzl"
 - [ ] Logo / brand identity design
+- [ ] Final pigeon mascot illustration (placeholder SVG is in `pigeon-mark.tsx`)
 - [ ] Who illustrates the chest-drop artwork? (Commission a Viennese illustrator?)
 - [ ] Pricing model long-term? (Currently planning: free forever, donation-supported, never ads)
 - [ ] Should we federate with anything? (Mastodon-style ActivityPub? Probably not Phase 1.)
 - [ ] iOS/Android native apps later, or stay PWA?
+- [ ] Self-host glyph fonts (for cluster labels) — currently no labels because of unreliable third-party font CDNs. Bundle with Protomaps move.
 
 ---
 
 ## 9. Resume notes
 
-**Where we left off (session 2, 2026-05-12):**
+### Session 1 — 2026-05-12
+- Concept, branding, stack chosen. 4-week MVP plan written. Gamification + chest-drop design captured. **No code yet.**
 
-- Week 1 complete. Production app live on Vercel; Supabase Frankfurt active.
-- Auth verified end-to-end: magic link → callback → session → auto-profile via `handle_new_user` trigger.
-- Mascot direction locked: Viennese pigeon (currently a stylised SVG placeholder).
-- Repo on GitHub (public). Vercel auto-deploys on push to `main`.
+### Session 2 — 2026-05-12
+- **Week 1 complete.** Next.js 16 + TypeScript + Tailwind v4 scaffolded, Supabase Frankfurt project provisioned, PostGIS + citext enabled, schema + RLS migrations applied, magic-link auth working end-to-end, MapLibre rendering Vienna, repo pushed to public GitHub, Vercel auto-deploying on push to `main`.
+- Build fixes that landed: MapLibre's `GeolocateControl` does not accept Mapbox's `showUserHeading`; `noImplicitAny` requires explicit types on `@supabase/ssr` cookie callbacks (`{ name: string; value: string; options: CookieOptions }[]`).
 
-**Two strict-build fixes that landed in session 2 (worth remembering for future code):**
+### Session 3 — 2026-05-12
+- **Week 2 complete.** Core loop is live.
+- New migrations: `_storage_pin_photos.sql` (public bucket with RLS), `_pins_view_and_rpc.sql` (`pins_with_coords` view + `pins_in_bbox` RPC).
+- New code surfaces:
+  - `src/lib/geo/snap.ts` — `snapTo100mGrid` (snap lat first, then derive lng step from snapped lat for band-consistent grid) + `haversineMeters`.
+  - `src/lib/pins/{types,fetch,constants,actions}.ts` — types, server-side fetchers, dropdown constants, `createPin` Server Action with input validation + Vienna-bbox guard + grid snap.
+  - `src/app/api/upload/route.ts` — Sharp pipeline strips all metadata, rotates by EXIF first, resizes ≤2000px, re-encodes as WebP @ q82. Uploads to `pin-photos/<uid>/<uuid>.webp`.
+  - `src/components/map/{vienna-map,map-shell,drop-pin-modal}.tsx` — long-press detection (450 ms / 6 px tolerance, right-click shortcut for desktop), clustered markers, modal state owned by MapShell.
+  - `src/components/pin/{pin-detail,pin-detail-modal}.tsx` — shared visual + client wrapper that closes via `router.back()`.
+  - `src/app/pin/[id]/{page,not-found}.tsx` — standalone full page with OG metadata.
+  - `src/app/@modal/default.tsx` + `src/app/@modal/(.)pin/[id]/page.tsx` — parallel slot + intercepting route; modal opens on marker-click navigation, full page opens on direct visit.
+  - `src/components/ui/dialog.tsx` — minimal accessible `<dialog>` wrapper (no Radix dep).
+- Lessons / footguns we hit:
+  - Don't pull glyphs from `fonts.openmaptiles.org`; bad responses crash MapLibre's protobuf parser with `Unimplemented type: 4`. Dropped text labels on clusters; size + colour ramp instead.
+  - **Don't `router.push('/pin/<new-id>')` after pin creation** — it pollutes history so the detail modal's `router.back()` lands on a previously-visited pin. Just `router.refresh()` and let the new marker appear on the map; users click it for the detail view.
+  - The Windows ↔ Linux-sandbox cross-filesystem mount silently truncates some `Write` tool calls. Workaround: rewrite via bash heredoc and strip trailing null padding before commit.
 
-- MapLibre's `GeolocateControl` does not accept Mapbox's `showUserHeading`.
-- `noImplicitAny` requires explicit types on `@supabase/ssr` co
+**Open items carried into session 4:**
+
+- [ ] Update Supabase Auth Site URL + Redirect URLs to include the Vercel production URL (so prod magic-links don't redirect to localhost). Add `https://*.vercel.app/auth/callback` for preview deploys too.
+- [ ] Self-host glyph fonts OR find a reliable CDN before re-introducing cluster labels.
+
+### Next session should: begin Week 3 — Social + moderation
+
+In rough dependency order:
+1. **Upvote a pin** (toggle). Adds an `upvotes` row via Server Action; map markers can grow with vote count later.
+2. **Save a pin** (toggle, private list). Similar shape to upvote but RLS-private.
+3. **Public profile page** at `/u/[handle]` — bio, pin count, recent pins. SSR'd.
+4. **Map filters: category, language.** Client-side filtering on the loaded GeoJSON; cheap and instant.
+5. **Report-pin flow** — modal with reason + notes (already have the `reports` table + RLS).
+6. **`/admin` page gated to my UID** — list `reports.status='open'`, soft-hide pins (`is_hidden=true`), ban users.
+7. **Mobile responsiveness pass** — most users will be on phones in the wild. Audit the modal, the form, the header.
+
+**To continue in a new session, paste this document or its key sections back into the conversation.**

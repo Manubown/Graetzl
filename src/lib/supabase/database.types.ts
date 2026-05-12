@@ -1,8 +1,8 @@
 /**
  * Hand-written types for the v1 schema. We'll replace this with
  * generated types via `supabase gen types typescript` once the
- * Supabase project is live. For now this mirrors the migration in
- * supabase/migrations/20260512000001_init_schema.sql.
+ * Supabase project is live. Mirrors the migrations in
+ * supabase/migrations/.
  */
 
 export type Category =
@@ -26,6 +26,24 @@ export type ReportReason =
   | "other";
 
 export type ReportStatus = "open" | "reviewed" | "dismissed";
+
+/** Shape returned by the pins_with_coords view + pins_in_bbox RPC. */
+export interface PinWithCoordsRow {
+  id: string;
+  author_id: string | null;
+  author_handle: string | null;
+  title: string;
+  body: string;
+  category: Category;
+  language: string;
+  precision: Precision;
+  city: string;
+  photo_url: string | null;
+  is_hidden: boolean;
+  created_at: string;
+  lng: number;
+  lat: number;
+}
 
 export interface Database {
   public: {
@@ -59,7 +77,7 @@ export interface Database {
           body: string;
           category: Category;
           language: string;
-          location: unknown; // PostGIS geography — opaque from JS side
+          location: unknown;
           precision: Precision;
           city: string;
           photo_url: string | null;
@@ -73,7 +91,7 @@ export interface Database {
           body: string;
           category: Category;
           language?: string;
-          location: string; // WKT or GeoJSON-as-string
+          location: string;
           precision?: Precision;
           city?: string;
           photo_url?: string | null;
@@ -91,29 +109,13 @@ export interface Database {
         }>;
       };
       upvotes: {
-        Row: {
-          user_id: string;
-          pin_id: string;
-          created_at: string;
-        };
-        Insert: {
-          user_id: string;
-          pin_id: string;
-          created_at?: string;
-        };
+        Row: { user_id: string; pin_id: string; created_at: string };
+        Insert: { user_id: string; pin_id: string; created_at?: string };
         Update: never;
       };
       saves: {
-        Row: {
-          user_id: string;
-          pin_id: string;
-          created_at: string;
-        };
-        Insert: {
-          user_id: string;
-          pin_id: string;
-          created_at?: string;
-        };
+        Row: { user_id: string; pin_id: string; created_at: string };
+        Insert: { user_id: string; pin_id: string; created_at?: string };
         Update: never;
       };
       reports: {
@@ -136,6 +138,23 @@ export interface Database {
           created_at?: string;
         };
         Update: never;
+      };
+    };
+    Views: {
+      pins_with_coords: {
+        Row: PinWithCoordsRow;
+      };
+    };
+    Functions: {
+      pins_in_bbox: {
+        Args: {
+          min_lng: number;
+          min_lat: number;
+          max_lng: number;
+          max_lat: number;
+          max_rows?: number;
+        };
+        Returns: PinWithCoordsRow[];
       };
     };
   };
