@@ -12,10 +12,6 @@ interface PinActionsProps {
   initialHasSaved: boolean;
 }
 
-/**
- * Heart (upvote, public count) + Bookmark (save, private).
- * Optimistically updates on click; reverts + shows a toast on error.
- */
 export function PinActions({
   pinId,
   initialUpvoteCount,
@@ -33,19 +29,15 @@ export function PinActions({
     setError(null);
     const prevUpvoted = upvoted;
     const prevCount = upvoteCount;
-    // Optimistic
     setUpvoted(!prevUpvoted);
     setUpvoteCount(prevCount + (prevUpvoted ? -1 : 1));
-
     startUpvote(async () => {
       const result = await toggleUpvote(pinId);
       if (!result.ok) {
-        // Revert
         setUpvoted(prevUpvoted);
         setUpvoteCount(prevCount);
         setError(result.error);
       } else {
-        // Server may disagree (e.g. row already existed) — trust it.
         setUpvoted(result.active);
       }
     });
@@ -55,7 +47,6 @@ export function PinActions({
     setError(null);
     const prevSaved = saved;
     setSaved(!prevSaved);
-
     startSave(async () => {
       const result = await toggleSave(pinId);
       if (!result.ok) {
@@ -68,7 +59,7 @@ export function PinActions({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={handleUpvote}
@@ -76,17 +67,14 @@ export function PinActions({
         aria-pressed={upvoted}
         aria-label={upvoted ? "Upvote entfernen" : "Upvoten"}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-60",
+          "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors disabled:opacity-60",
           upvoted
             ? "border-primary bg-primary text-primary-foreground"
             : "border-border bg-background hover:bg-muted",
         )}
       >
-        <Heart
-          className={cn("h-4 w-4", upvoted && "fill-current")}
-          strokeWidth={2}
-        />
-        <span className="tabular-nums">{upvoteCount}</span>
+        <Heart className={cn("h-4 w-4", upvoted && "fill-current")} />
+        <span className="tabular-nums font-medium">{upvoteCount}</span>
       </button>
 
       <button
@@ -96,17 +84,14 @@ export function PinActions({
         aria-pressed={saved}
         aria-label={saved ? "Speichern entfernen" : "Pin speichern"}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-60",
+          "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors disabled:opacity-60",
           saved
             ? "border-accent bg-accent text-accent-foreground"
             : "border-border bg-background hover:bg-muted",
         )}
       >
-        <Bookmark
-          className={cn("h-4 w-4", saved && "fill-current")}
-          strokeWidth={2}
-        />
-        <span className="hidden sm:inline">
+        <Bookmark className={cn("h-4 w-4", saved && "fill-current")} />
+        <span className="hidden font-medium sm:inline">
           {saved ? "Gespeichert" : "Speichern"}
         </span>
       </button>
