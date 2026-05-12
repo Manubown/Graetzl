@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { PinWithStats } from "@/lib/pins/types";
 import { CATEGORIES } from "@/lib/pins/constants";
 import { PinActions } from "./pin-actions";
+import { ReportButton } from "./report-button";
 
 interface PinDetailProps {
   pin: PinWithStats;
@@ -82,6 +83,10 @@ export function PinDetail({ pin }: PinDetailProps) {
           <dd>{pin.language === "de" ? "Deutsch" : pin.language}</dd>
         </div>
       </dl>
+
+      <div className="flex justify-end">
+        <ReportButton pinId={pin.id} />
+      </div>
     </article>
   );
 }
