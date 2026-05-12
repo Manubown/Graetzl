@@ -6,7 +6,12 @@ import { cn } from "@/lib/utils";
 interface DialogProps {
   open: boolean;
   onClose: () => void;
-  children: React.ReactNode;
+  /**
+   * Optional body content. Self-closing `<Dialog ... />` is allowed so
+   * callers can render a "shell" dialog while their content prepares
+   * (see DropPinModal's `coords === null` branch).
+   */
+  children?: React.ReactNode;
   title: string;
   className?: string;
 }
@@ -68,7 +73,16 @@ export function Dialog({
           aria-label="Schließen"
           className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M18 6L6 18" />
             <path d="M6 6l12 12" />
           </svg>
