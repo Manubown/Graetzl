@@ -2,11 +2,15 @@
 -- Grätzl — pin_with_stats RPC
 -- Week 3, session 4
 --
--- Returns a pin (from pins_with_coords) with aggregated upvote/save
--- counts AND the current user's interaction state (has_upvoted /
--- has_saved). Used by the pin detail page and modal.
+-- Returns a pin (from pins_with_coords) with aggregated upvote count
+-- AND the current user's interaction state (has_upvoted / has_saved).
+-- Used by the pin detail page and modal.
 --
 -- security_invoker so RLS on the underlying tables is enforced.
+--
+-- Note: "precision" is a reserved SQL keyword; we must quote it inside
+-- the RETURNS TABLE column list (the underlying view definition gets
+-- away with it un-quoted, but RETURNS TABLE's parser is stricter).
 -- =====================================================================
 
 create or replace function public.pin_with_stats(p_pin_id uuid)
@@ -18,7 +22,7 @@ returns table (
   body            text,
   category        text,
   language        text,
-  precision       text,
+  "precision"     text,
   city            text,
   photo_url       text,
   is_hidden       boolean,
@@ -42,7 +46,7 @@ as $$
     pwc.body,
     pwc.category,
     pwc.language,
-    pwc.precision,
+    pwc."precision",
     pwc.city,
     pwc.photo_url,
     pwc.is_hidden,
@@ -50,11 +54,8 @@ as $$
     pwc.lng,
     pwc.lat,
     (select count(*) from public.upvotes u where u.pin_id = pwc.id) as upvote_count,
-    -- save_count is private to each user under RLS, but the COUNT
-    -- aggregate runs as the caller — so a non-owner just sees their
-    -- own saves' count (which is what we want: have I saved it?).
-    -- For a public-style "X people saved this" we'd need a separate
-    -- aggregate column, but saves are intentionally not displayed.
+    -- save_count is private under RLS; we always return 0 to match the
+    -- "saves are private, don't display a public count" UX rule.
     0::bigint as save_count,
     exists (
       select 1 from public.upvotes u
