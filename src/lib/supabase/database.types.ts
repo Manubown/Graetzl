@@ -1,8 +1,14 @@
 /**
- * Hand-written types for the v1 schema. We'll replace this with
- * generated types via `supabase gen types typescript` once the
- * Supabase project is live. Mirrors the migrations in
- * supabase/migrations/.
+ * Hand-written types for the v1 schema. Mirrors the migrations in
+ * supabase/migrations/. We'll switch to generated types via
+ * `supabase gen types typescript` once the project is settled.
+ *
+ * Shape MUST match what `@supabase/supabase-js` expects (Tables /
+ * Views / Functions / Enums / CompositeTypes, all as `type` not
+ * `interface`). Missing branches collapse the inferred table row
+ * types to `never`, which surfaces as confusing build errors like
+ * "Object literal may only specify known properties, and 'X' does
+ * not exist in type 'never[]'".
  */
 
 export type Category =
@@ -27,8 +33,7 @@ export type ReportReason =
 
 export type ReportStatus = "open" | "reviewed" | "dismissed";
 
-/** Shape returned by the pins_with_coords view + pins_in_bbox RPC. */
-export interface PinWithCoordsRow {
+export type PinWithCoordsRow = {
   id: string;
   author_id: string | null;
   author_handle: string | null;
@@ -43,9 +48,16 @@ export interface PinWithCoordsRow {
   created_at: string;
   lng: number;
   lat: number;
-}
+};
 
-export interface Database {
+export type PinWithStatsRow = PinWithCoordsRow & {
+  upvote_count: number;
+  save_count: number;
+  has_upvoted: boolean;
+  has_saved: boolean;
+};
+
+export type Database = {
   public: {
     Tables: {
       profiles: {
@@ -68,6 +80,7 @@ export interface Database {
           bio: string | null;
           home_city: string;
         }>;
+        Relationships: [];
       };
       pins: {
         Row: {
@@ -107,16 +120,19 @@ export interface Database {
           photo_url: string | null;
           is_hidden: boolean;
         }>;
+        Relationships: [];
       };
       upvotes: {
         Row: { user_id: string; pin_id: string; created_at: string };
         Insert: { user_id: string; pin_id: string; created_at?: string };
-        Update: never;
+        Update: Partial<{ user_id: string; pin_id: string; created_at: string }>;
+        Relationships: [];
       };
       saves: {
         Row: { user_id: string; pin_id: string; created_at: string };
         Insert: { user_id: string; pin_id: string; created_at?: string };
-        Update: never;
+        Update: Partial<{ user_id: string; pin_id: string; created_at: string }>;
+        Relationships: [];
       };
       reports: {
         Row: {
@@ -137,13 +153,15 @@ export interface Database {
           status?: ReportStatus;
           created_at?: string;
         };
-        Update: never;
+        Update: Partial<{
+          status: ReportStatus;
+          notes: string | null;
+        }>;
+        Relationships: [];
       };
     };
     Views: {
-      pins_with_coords: {
-        Row: PinWithCoordsRow;
-      };
+      pins_with_coords: { Row: PinWithCoordsRow; Relationships: [] };
     };
     Functions: {
       pins_in_bbox: {
@@ -156,6 +174,16 @@ export interface Database {
         };
         Returns: PinWithCoordsRow[];
       };
+      pin_with_stats: {
+        Args: { p_pin_id: string };
+        Returns: PinWithStatsRow[];
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
-}
+};
