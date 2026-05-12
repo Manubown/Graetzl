@@ -1,6 +1,6 @@
 # Grätzl — Implementation Plan
 
-> Living document. Update at the end of every working session. Last updated: 2026-05-12 (session 1).
+> Living document. Update at the end of every working session. Last updated: 2026-05-12 (session 2).
 
 ---
 
@@ -21,10 +21,10 @@
 - [x] Launch city: **Vienna**
 - [x] Commercial stance: **strictly non-commercial** — no business pins, ever
 - [x] Identity model: **pseudonymous handles** with reputation badges
-- [x] Hosting (MVP): Vercel + Supabase Frankfurt (Next.js + Postgres/PostGIS)
+- [x] Hosting (MVP): Vercel + Supabase Frankfurt (Next.js + Postgres/PostGIS) — **live**
+- [x] Mascot direction: **Viennese pigeon** (placeholder SVG in `pigeon-mark.tsx`; final illustration TBD)
 - [x] Maps: MapLibre GL JS + OpenStreetMap tiles
 - [x] Gamification: yes, planned for Phase 2; chest-drop collectibles in Phase 3
-- [ ] Mascot direction: leaning toward **a Viennese pigeon** (urban, ubiquitous across European cities, customizable) — TBD
 - [ ] Domain: check `graetzl.app` / `graetzl.eu` / `getgraetzl.com`
 - [ ] Trademark search: TBD
 
@@ -40,11 +40,6 @@
 - **Analytics:** Plausible (EU, cookieless)
 - **Error tracking:** Sentry EU region
 - **Image processing:** Sharp (EXIF stripping on upload)
-
-### Suparbase
-Project name: Graetzl
-DB Passwort: XvJGmVVeNbmnbaxc
-Security settings: TBD
 
 ---
 
@@ -107,16 +102,16 @@ reports  (id, pin_id, reporter_id, reason, notes, status, created_at)
 
 The thing that has to exist before anyone sees it.
 
-#### Week 1 — Foundation
-- [ ] Initialize Next.js 15 project, deploy "hello world" to Vercel
-- [ ] Create Supabase project in **Frankfurt region**
-- [ ] Enable PostGIS extension
-- [ ] Write initial schema migration (`profiles`, `pins`, `upvotes`, `saves`, `reports`)
-- [ ] Write RLS policies for all tables
-- [ ] Set up magic-link auth via Supabase Auth
-- [ ] Render MapLibre with Vienna as default center, OSM tile provider
-- [ ] Basic layout shell (Tailwind + shadcn/ui)
-- [ ] **Done when:** you can log in and see an empty map of Vienna
+#### Week 1 — Foundation ✅ DONE (session 2)
+- [x] Initialize Next.js 16 project, deploy "hello world" to Vercel
+- [x] Create Supabase project in **Frankfurt region**
+- [x] Enable PostGIS extension (+ citext for case-insensitive handles)
+- [x] Write initial schema migration (`profiles`, `pins`, `upvotes`, `saves`, `reports`)
+- [x] Write RLS policies for all tables
+- [x] Set up magic-link auth via Supabase Auth
+- [x] Render MapLibre with Vienna as default center, OSM tile provider
+- [x] Basic layout shell (Tailwind v4; shadcn primitives added on-demand)
+- [x] **Done when:** you can log in and see an empty map of Vienna ← achieved
 
 #### Week 2 — Core loop
 - [ ] Drop-pin UX: long-press on map → modal with title / body / category / language / precision toggle
@@ -296,20 +291,14 @@ Only after Vienna proves out (target: 2,000+ weekly active users, 5,000+ pins).
 
 ## 9. Resume notes
 
-**Where we left off (session 1, 2026-05-12):**
+**Where we left off (session 2, 2026-05-12):**
 
-- Concept validated: anti-TripAdvisor, locally-curated, non-commercial city map
-- Branding: Grätzl, Vienna launch first
-- Stack chosen: Next.js + Supabase Frankfurt + MapLibre + OSM
-- 4-week MVP plan written
-- Gamification designed for Phase 2; chest drops for Phase 3
-- Code: **not yet started**
+- Week 1 complete. Production app live on Vercel; Supabase Frankfurt active.
+- Auth verified end-to-end: magic link → callback → session → auto-profile via `handle_new_user` trigger.
+- Mascot direction locked: Viennese pigeon (currently a stylised SVG placeholder).
+- Repo on GitHub (public). Vercel auto-deploys on push to `main`.
 
-**Next session should:**
+**Two strict-build fixes that landed in session 2 (worth remembering for future code):**
 
-1. Decide mascot direction
-2. Check domain availability
-3. Begin Week 1 tasks — Next.js project init, Supabase project creation, schema migration
-4. Alternatively: deeper dive on UI/UX design before code (wireframes, design tokens)
-
-**To continue in a new session, paste this document or its key sections back into the conversation.**
+- MapLibre's `GeolocateControl` does not accept Mapbox's `showUserHeading`.
+- `noImplicitAny` requires explicit types on `@supabase/ssr` co
