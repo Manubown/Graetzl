@@ -1,13 +1,16 @@
 import { MapShell } from "@/components/map/map-shell";
+import { FilterBar } from "@/components/map/filter-bar";
 import { WelcomeCard } from "@/components/welcome-card";
 import { fetchPinsInBbox } from "@/lib/pins/fetch";
 import type { Pin } from "@/lib/pins/types";
 
 /**
- * Home page is a Server Component. It fetches the visible pins for
- * Vienna's bounding box (RLS-enforced), then hands them to the
- * client-side MapShell. The WelcomeCard is a separate client component
- * because it remembers dismissal in localStorage.
+ * Home page. Server-fetches all visible pins in Vienna once; the client
+ * MapShell + FilterBar apply URL-driven filters on top of that.
+ *
+ * NOTE: filtering is intentionally client-side so URL changes don't
+ * trigger a full server round-trip. The cost is loading "extra" pins,
+ * but the pins_in_bbox RPC caps results at 500 so the payload stays small.
  */
 export default async function HomePage() {
   let pins: Pin[] = [];
@@ -22,6 +25,7 @@ export default async function HomePage() {
   return (
     <div className="relative flex-1">
       <MapShell pins={pins} />
+      <FilterBar />
       <WelcomeCard
         errorHint={
           dataError
@@ -30,7 +34,7 @@ export default async function HomePage() {
         }
         emptyHint={
           !dataError && pins.length === 0
-            ? "Noch keine Pins. Lange auf die Karte tippen oder den +-Button unten rechts nutzen, um den ersten Pin zu setzen."
+            ? "Noch keine Pins. Lange auf die Karte tippen (Rechtsklick am Desktop), um den ersten Pin zu setzen."
             : undefined
         }
       />

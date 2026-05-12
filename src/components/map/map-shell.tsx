@@ -1,17 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import type { Pin } from "@/lib/pins/types";
+import { parseFiltersFromParams, applyFilters } from "@/lib/pins/filters";
 import { DropPinModal } from "./drop-pin-modal";
 
-/**
- * Client wrapper that:
- *  • Dynamically imports the WebGL map with ssr:false (Next 16
- *    disallows this in Server Components).
- *  • Owns the drop-pin modal state so the map can call back with
- *    long-press coordinates (mouse + touch).
- */
 const ViennaMap = dynamic(
   () => import("./vienna-map").then((m) => m.ViennaMap),
   {
@@ -25,6 +20,16 @@ const ViennaMap = dynamic(
 );
 
 export function MapShell({ pins }: { pins: Pin[] }) {
+  const searchParams = useSearchParams();
+  const filters = useMemo(
+    () => parseFiltersFromParams(searchParams),
+    [searchParams],
+  );
+  const filteredPins = useMemo(
+    () => applyFilters(pins, filters),
+    [pins, filters],
+  );
+
   const [modalCoords, setModalCoords] = useState<{
     lng: number;
     lat: number;
@@ -36,7 +41,7 @@ export function MapShell({ pins }: { pins: Pin[] }) {
 
   return (
     <>
-      <ViennaMap pins={pins} onLongPress={handleLongPress} />
+      <ViennaMap pins={filteredPins} onLongPress={handleLongPress} />
       <DropPinModal
         open={modalCoords !== null}
         coords={modalCoords}
