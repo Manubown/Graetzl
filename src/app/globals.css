@@ -1,0 +1,65 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+/* ------------------------------------------------------------------
+   Grätzl design tokens
+   Palette is intentionally muted — the map and pins do the talking.
+   Primary: Wiener Rot (a softened Habsburg crimson)
+   Accent: Donau Türkis (the river runs through it)
+------------------------------------------------------------------ */
+:root {
+  --background: #fafaf7;
+  --foreground: #18181b;
+  --muted: #f1f1ec;
+  --muted-foreground: #5b5b5f;
+  --border: #e6e5e0;
+  --primary: #b3322c;          /* Wiener Rot */
+  --primary-foreground: #ffffff;
+  --accent: #2e8a8a;            /* Donau Türkis */
+  --accent-foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --font-sans: var(--font-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e0e10;
+    --foreground: #ededed;
+    --muted: #1a1a1d;
+    --muted-foreground: #9a9a9e;
+    --border: #26262a;
+    --primary: #d04640;
+    --primary-foreground: #ffffff;
+    --accent: #3aa3a3;
+    --accent-foreground: #ffffff;
+  }
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* MapLibre tweaks so attribution doesn't clash with our chrome */
+.maplibregl-ctrl-attrib {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+}

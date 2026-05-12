@@ -1,0 +1,59 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — never commit local secrets
+.env
+.env.local
+.env.*.local
+!.env.local.example
+
+# vercel
+.vercel
+
+# supabase (local dev artefacts; migrations themselves ARE committed)
+.supabase/
+supabase/.branches
+supabase/.temp
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# scaffolding leftovers from failed first install (Windows)
+_tmp_*
+graetzl-tmp/
+.write-test
