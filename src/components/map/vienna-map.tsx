@@ -8,18 +8,8 @@ import type { Pin } from "@/lib/pins/types";
 const VIENNA_CENTER: [number, number] = [16.3738, 48.2082];
 const DEFAULT_ZOOM = 12;
 const LONG_PRESS_MS = 450;
-const LONG_PRESS_MOVE_TOLERANCE_PX = 6;
+const LONG_PRESS_MOVE_TOLERANCE_PX = 8;
 
-/**
- * OpenStreetMap raster tiles. Phase-2 plan calls for self-hosted
- * Protomaps vector tiles once scale demands it.
- *
- * No `glyphs` URL here — we deliberately avoid pulling fonts from
- * third-party servers (some are unreliable; we hit "Unimplemented
- * type: 4" protobuf-parser errors in MapLibre on bad responses).
- * Cluster size is conveyed by circle radius alone; once we self-host
- * Protomaps in Phase 2 we'll bundle glyphs and add numeric labels back.
- */
 const OSM_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
@@ -64,22 +54,30 @@ function pinsToFeatureCollection(
 
 interface ViennaMapProps {
   pins: Pin[];
-  /**
-   * Called when the user long-presses an empty spot on the map.
-   * Coordinates are in lng/lat (WGS84).
-   */
+  /** Fired when the user long-presses (or right-clicks) empty map space. */
   onLongPress?: (lng: number, lat: number) => void;
+  /** Fired on every map move; used by the FAB to know the current centre. */
+  onViewChange?: (lng: number, lat: number) => void;
 }
 
-export function ViennaMap({ pins, onLongPress }: ViennaMapProps) {
+export function ViennaMap({
+  pins,
+  onLongPress,
+  onViewChange,
+}: ViennaMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const router = useRouter();
 
+  // Stable refs so we don't need to re-init the map when callbacks change.
   const onLongPressRef = useRef<typeof onLongPress>(onLongPress);
+  const onViewChangeRef = useRef<typeof onViewChange>(onViewChange);
   useEffect(() => {
     onLongPressRef.current = onLongPress;
   }, [onLongPress]);
+  useEffect(() => {
+    onViewChangeRef.current = onViewChange;
+  }, [onViewChange]);
 
   // One-time map init.
   useEffect(() => {
@@ -112,6 +110,12 @@ export function ViennaMap({ pins, onLongPress }: ViennaMapProps) {
     );
 
     map.on("load", () => {
+      // Seed the parent's view ref with the initial centre.
+      if (onViewChangeRef.current) {
+        const c = map.getCenter();
+        onViewChangeRef.current(c.lng, c.lat);
+      }
+
       map.addSource(PINS_SOURCE_ID, {
         type: "geojson",
         data: pinsToFeatureCollection([]),
@@ -120,7 +124,6 @@ export function ViennaMap({ pins, onLongPress }: ViennaMapProps) {
         clusterMaxZoom: 14,
       });
 
-      // Cluster bubbles. No text inside — radius + stroke tell the story.
       map.addLayer({
         id: "clusters",
         type: "circle",
@@ -130,9 +133,9 @@ export function ViennaMap({ pins, onLongPress }: ViennaMapProps) {
           "circle-color": [
             "step",
             ["get", "point_count"],
-            "#d04640",  // 2–9 pins, soft
-            10, "#b3322c",   // 10–49, primary Wiener Rot
-            50, "#7a1f1c",   // 50+, deep
+            "#d04640",
+            10, "#b3322c",
+            50, "#7a1f1c",
           ],
           "circle-opacity": 0.9,
           "circle-radius": [
@@ -148,7 +151,6 @@ export function ViennaMap({ pins, onLongPress }: ViennaMapProps) {
         },
       });
 
-      // Individual pins
       map.addLayer({
         id: "pin-point",
         type: "circle",
@@ -202,7 +204,15 @@ export function ViennaMap({ pins, onLongPress }: ViennaMapProps) {
       }
     });
 
-    // Long-press detection (mouse + touch).
+    // Sync the parent's view ref on every move-end (debounced by MapLibre).
+    map.on("moveend", () => {
+      const c = map.getCenter();
+      onViewChangeRef.current?.(c.lng, c.lat);
+    });
+
+    // ================================================================
+    // Long-press detection — mouse AND touch (so mobile works).
+    // ================================================================
     let pressTimer: ReturnType<typeof setTimeout> | null = null;
     let pressStart: { x: number; y: number; lng: number; lat: number } | null = null;
     let pressedOverFeature = false;
@@ -214,35 +224,52 @@ export function ViennaMap({ pins, onLongPress }: ViennaMapProps) {
       pressedOverFeature = false;
     }
 
-    map.on("mousedown", (e) => {
-      const features = map.queryRenderedFeatures(e.point, {
+    function beginPress(point: maplibregl.Point, lngLat: maplibregl.LngLat) {
+      const features = map.queryRenderedFeatures(point, {
         layers: ["pin-point", "clusters"],
       });
       pressedOverFeature = features.length > 0;
       if (pressedOverFeature) return;
 
-      pressStart = {
-        x: e.point.x,
-        y: e.point.y,
-        lng: e.lngLat.lng,
-        lat: e.lngLat.lat,
-      };
+      pressStart = { x: point.x, y: point.y, lng: lngLat.lng, lat: lngLat.lat };
       pressTimer = setTimeout(() => {
         if (pressStart && onLongPressRef.current) {
           onLongPressRef.current(pressStart.lng, pressStart.lat);
         }
         cancelPress();
       }, LONG_PRESS_MS);
-    });
+    }
 
-    map.on("mousemove", (e) => {
+    function checkMove(point: maplibregl.Point) {
       if (!pressStart || pressedOverFeature) return;
-      const dx = e.point.x - pressStart.x;
-      const dy = e.point.y - pressStart.y;
+      const dx = point.x - pressStart.x;
+      const dy = point.y - pressStart.y;
       if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE_PX) cancelPress();
-    });
+    }
 
+    // Mouse
+    map.on("mousedown", (e) => beginPress(e.point, e.lngLat));
+    map.on("mousemove", (e) => checkMove(e.point));
     map.on("mouseup", cancelPress);
+
+    // Touch — single-touch only; multi-touch (pinch-zoom) cancels.
+    map.on("touchstart", (e) => {
+      if (e.originalEvent.touches.length > 1) {
+        cancelPress();
+        return;
+      }
+      beginPress(e.point, e.lngLat);
+    });
+    map.on("touchmove", (e) => {
+      if (e.originalEvent.touches.length > 1) {
+        cancelPress();
+        return;
+      }
+      checkMove(e.point);
+    });
+    map.on("touchend", cancelPress);
+    map.on("touchcancel", cancelPress);
+
     map.on("dragstart", cancelPress);
     map.on("contextmenu", (e) => {
       if (onLongPressRef.current) {
@@ -260,7 +287,6 @@ export function ViennaMap({ pins, onLongPress }: ViennaMapProps) {
     };
   }, [router]);
 
-  // Update pin data whenever the `pins` prop changes.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
