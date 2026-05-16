@@ -16,7 +16,7 @@ export async function SiteHeader() {
     profile !== null && getAdminUids().includes(profile.id);
 
   return (
-    <header className="sticky top-0 z-30 flex h-12 w-full items-center justify-between border-b border-border/60 bg-background/75 px-3 backdrop-blur-xl sm:h-14 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-12 min-h-12 w-full shrink-0 items-center justify-between border-b border-border/60 bg-background/75 px-3 backdrop-blur-xl sm:h-14 sm:min-h-14 sm:px-4">
       <Link
         href="/"
         className="flex items-center gap-1.5 sm:gap-2"
