@@ -2,8 +2,141 @@
 
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { PasswordForm } from "@/components/auth/password-form";
+import { requestPasswordReset } from "@/lib/auth/actions";
+import { track } from "@/lib/analytics/plausible";
 
-export function SignInForm() {
+/**
+ * Sign-in surface. Outer tabs: Magic-Link | E-Mail + Passwort.
+ * Password tab has inner tabs: Anmelden | Registrieren.
+ * Magic-link tab is untouched from S0-6.
+ */
+export function SignInForm({ nextPath = "/" }: { nextPath?: string }) {
+  return (
+    <Tabs defaultValue="magiclink" className="w-full">
+      <TabsList aria-label="Anmeldemethode wählen">
+        <TabsTrigger value="magiclink">Magic-Link</TabsTrigger>
+        <TabsTrigger value="password">E-Mail + Passwort</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="magiclink">
+        <MagicLinkForm />
+      </TabsContent>
+
+      <TabsContent value="password">
+        <Tabs defaultValue="signin" className="w-full">
+          <TabsList aria-label="Konto-Aktion wählen">
+            <TabsTrigger value="signin">Anmelden</TabsTrigger>
+            <TabsTrigger value="signup">Registrieren</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="signin">
+            <PasswordForm mode="signin" nextPath={nextPath} />
+            <ForgotPasswordLink />
+          </TabsContent>
+
+          <TabsContent value="signup">
+            <PasswordForm mode="signup" nextPath={nextPath} />
+          </TabsContent>
+        </Tabs>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ForgotPasswordLink
+// ---------------------------------------------------------------------------
+
+type ForgotStatus = "collapsed" | "open" | "sent";
+
+function ForgotPasswordLink() {
+  const [status, setStatus] = useState<ForgotStatus>("collapsed");
+  const [resetEmail, setResetEmail] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function handleToggle() {
+    setStatus((s) => (s === "collapsed" ? "open" : "collapsed"));
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (pending) return;
+
+    const formData = new FormData();
+    formData.set("email", resetEmail);
+
+    startTransition(async () => {
+      await requestPasswordReset(formData);
+      // Always show the same message regardless of outcome (no enumeration).
+      setStatus("sent");
+      track("auth_reset_requested");
+    });
+  }
+
+  if (status === "sent") {
+    return (
+      <p
+        role="status"
+        className="mt-3 text-center text-sm text-muted-foreground"
+      >
+        Falls ein Konto mit dieser E-Mail existiert, haben wir eine Mail gesendet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--accent)] dark:focus-visible:ring-[var(--primary)]"
+      >
+        Passwort vergessen?
+      </button>
+
+      {status === "open" && (
+        <form
+          onSubmit={handleSubmit}
+          className="mt-3 flex flex-col gap-2"
+          aria-label="Passwort zurücksetzen"
+        >
+          <Input
+            type="email"
+            required
+            placeholder="du@example.com"
+            autoComplete="email"
+            value={resetEmail}
+            onChange={(e) => setResetEmail(e.target.value)}
+            disabled={pending}
+          />
+          <Button
+            type="submit"
+            variant="outline"
+            className="w-full"
+            disabled={resetEmail.length === 0 || pending}
+          >
+            {pending ? "Wird gesendet…" : "Link senden"}
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MagicLinkForm — untouched from S0-6
+// ---------------------------------------------------------------------------
+
+function MagicLinkForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

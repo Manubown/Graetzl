@@ -48,6 +48,8 @@ export type PinWithCoordsRow = {
   created_at: string;
   lng: number;
   lat: number;
+  /** Vienna Bezirk (1..23) or null. Added by B-2 + B-6. */
+  district_id: number | null;
 };
 
 export type PinWithStatsRow = PinWithCoordsRow & {
@@ -96,6 +98,7 @@ export type Database = {
           photo_url: string | null;
           is_hidden: boolean;
           created_at: string;
+          district_id: number | null;
         };
         Insert: {
           id?: string;
@@ -110,6 +113,7 @@ export type Database = {
           photo_url?: string | null;
           is_hidden?: boolean;
           created_at?: string;
+          district_id?: number | null;
         };
         Update: Partial<{
           title: string;
@@ -119,6 +123,7 @@ export type Database = {
           precision: Precision;
           photo_url: string | null;
           is_hidden: boolean;
+          district_id: number | null;
         }>;
         Relationships: [];
       };
@@ -164,12 +169,27 @@ export type Database = {
       pins_with_coords: { Row: PinWithCoordsRow; Relationships: [] };
     };
     Functions: {
+      district_at_point: {
+        Args: { p_lng: number; p_lat: number };
+        Returns: number | null;
+      };
       pins_in_bbox: {
         Args: {
           min_lng: number;
           min_lat: number;
           max_lng: number;
           max_lat: number;
+          max_rows?: number;
+        };
+        Returns: PinWithCoordsRow[];
+      };
+      pins_in_bbox_filtered: {
+        Args: {
+          min_lng: number;
+          min_lat: number;
+          max_lng: number;
+          max_lat: number;
+          p_bezirk?: number | null;
           max_rows?: number;
         };
         Returns: PinWithCoordsRow[];

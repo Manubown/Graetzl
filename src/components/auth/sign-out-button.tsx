@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { signOut } from "@/lib/auth/actions";
+import { Button } from "@/components/ui/button";
 
 /**
  * Standalone sign-out trigger so the header (a server component)
@@ -10,14 +11,16 @@ import { signOut } from "@/lib/auth/actions";
 export function SignOutButton() {
   const [pending, start] = useTransition();
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={() => start(() => signOut())}
       disabled={pending}
-      className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+      className="text-muted-foreground"
       aria-label="Abmelden"
     >
       {pending ? "…" : "Abmelden"}
-    </button>
+    </Button>
   );
 }

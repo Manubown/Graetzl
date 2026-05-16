@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { fetchProfileWithStats, fetchCurrentProfile } from "@/lib/profiles/fetch";
+import {
+  fetchProfileWithStats,
+  fetchCurrentProfile,
+  fetchSavedPinsForCurrentUser,
+} from "@/lib/profiles/fetch";
 import { PinCard } from "@/components/pin/pin-card";
 import { PigeonMark } from "@/components/pigeon-mark";
 import { ProfileEditButton } from "@/components/profile/profile-edit-button";
@@ -36,6 +40,13 @@ export default async function ProfilePage({ params }: PageProps) {
     month: "long",
     year: "numeric",
   });
+
+  // Saves are RLS-private — only fetch for the profile owner. Non-owners
+  // wouldn't see anything anyway, but skipping the query avoids a wasted
+  // round-trip.
+  const savedPins = isOwner
+    ? await fetchSavedPinsForCurrentUser().catch(() => [])
+    : [];
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8">
@@ -88,6 +99,26 @@ export default async function ProfilePage({ params }: PageProps) {
           </div>
         )}
       </section>
+
+      {isOwner && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-medium tracking-tight text-muted-foreground">
+            Gespeicherte Orte
+          </h2>
+          {savedPins.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 px-6 py-10 text-center text-sm text-muted-foreground">
+              Noch keine gespeicherten Pins. Tippe das Lesezeichen-Symbol auf
+              einem Pin, um ihn hier zu sammeln.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {savedPins.map((p) => (
+                <PinCard key={p.id} pin={p} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

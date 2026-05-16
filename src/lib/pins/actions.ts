@@ -18,6 +18,34 @@ const VALID_CATEGORIES: Category[] = [
 
 const VALID_LANGUAGES = ["de", "en"];
 
+/**
+ * Photo URLs come from the client. Without this check, anyone scripting
+ * the public Server Action could store `javascript:`, `data:`, or any
+ * attacker-controlled https URL as a pin's image — turning the photo
+ * field into a phishing/SSRF/fingerprinting vector. We require the URL
+ * to live on the Supabase Storage host, under the *current* user's UID
+ * prefix in the `pin-photos` bucket.
+ */
+function isOwnPinPhotoUrl(url: string, userId: string): boolean {
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) return false;
+
+  let parsed: URL;
+  let base: URL;
+  try {
+    parsed = new URL(url);
+    base = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== "https:") return false;
+  if (parsed.origin !== base.origin) return false;
+
+  const expectedPrefix = `/storage/v1/object/public/pin-photos/${userId}/`;
+  return parsed.pathname.startsWith(expectedPrefix);
+}
+
 export type CreatePinResult =
   | { ok: true; pinId: string }
   | { ok: false; error: string };
@@ -73,6 +101,9 @@ export async function createPin(formData: FormData): Promise<CreatePinResult> {
   ) {
     return { ok: false, error: "Pin liegt außerhalb von Wien." };
   }
+  if (photoUrl !== null && !isOwnPinPhotoUrl(photoUrl, user.id)) {
+    return { ok: false, error: "Foto-URL ist ungültig." };
+  }
 
   let lng = lngRaw;
   let lat = latRaw;
@@ -81,6 +112,15 @@ export async function createPin(formData: FormData): Promise<CreatePinResult> {
     lat = snapped.lat;
     lng = snapped.lng;
   }
+
+  // Resolve the Vienna Bezirk for this pin's final coordinates.
+  // Returns null if the point falls outside all seeded boundaries —
+  // e.g. an approximate-precision snap that crossed a district edge.
+  // A null district_id is a valid "unknown district" state (ADR-04).
+  const { data: districtId } = await supabase.rpc("district_at_point", {
+    p_lng: lng,
+    p_lat: lat,
+  });
 
   const locationWkt = `SRID=4326;POINT(${lng} ${lat})`;
 
@@ -92,6 +132,7 @@ export async function createPin(formData: FormData): Promise<CreatePinResult> {
       location: locationWkt,
       precision,
       photo_url: photoUrl,
+      district_id: districtId ?? null,
     })
     .select("id")
     .single();

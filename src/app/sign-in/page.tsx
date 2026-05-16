@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { SignInForm } from "./sign-in-form";
 import { PigeonMark } from "@/components/pigeon-mark";
+import { TrackSignupConfirmed } from "@/components/auth/track-signup-confirmed";
 
 export const metadata = { title: "Anmelden" };
 
@@ -20,6 +22,9 @@ export default function SignInPage() {
         <div className="mt-6">
           <SignInForm />
         </div>
+        <Suspense fallback={null}>
+          <TrackSignupConfirmed />
+        </Suspense>
         <p className="mt-6 text-center text-xs text-muted-foreground">
           Mit der Anmeldung akzeptierst du unsere Nutzungsbedingungen und
           Datenschutzerklärung.

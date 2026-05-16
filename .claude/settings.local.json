@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Manubown\\\\Programmieren\\\\EU_Base-App\\\\Graetzl\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm lint *)",
+      "Bash(node scripts/generate-districts-seed.mjs)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(pnpm add *)",
+      "Bash(pnpm tsc *)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm eslint *)"
+    ]
+  }
+}

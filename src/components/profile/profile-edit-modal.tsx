@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { updateProfile } from "@/lib/profiles/actions";
 
 interface ProfileEditModalProps {
@@ -92,20 +93,12 @@ export function ProfileEditModal({
         {error && <p className="text-sm text-primary">{error}</p>}
 
         <div className="mt-2 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-muted-foreground hover:bg-muted"
-          >
+          <Button type="button" variant="ghost" onClick={onClose}>
             Abbrechen
-          </button>
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" variant="primary" disabled={pending}>
             {pending ? "Wird gespeichert…" : "Speichern"}
-          </button>
+          </Button>
         </div>
       </form>
     </Dialog>

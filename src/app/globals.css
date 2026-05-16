@@ -17,6 +17,74 @@
   --primary-foreground: #ffffff;
   --accent: #2e8a8a;            /* Donau Türkis */
   --accent-foreground: #ffffff;
+
+  /* --------------------------------------------------------------
+     Motion tokens (C-1 / C-AC3.1).
+     One easing function ("Material standard ease"), three speeds.
+     Every animated primitive — Sheet open/close, Dialog enter,
+     Toast slide, Tooltip fade — references these tokens. No
+     hardcoded durations in component files. Motion budget: 320ms.
+  -------------------------------------------------------------- */
+  --motion-fast:    120ms;
+  --motion-default: 200ms;
+  --motion-slow:    320ms;
+  --motion-ease:    cubic-bezier(0.2, 0, 0, 1);
+
+  /* --------------------------------------------------------------
+     Fluid type scale (C-1 / C-AC5.1).
+     clamp(min, vw-based ideal, max) — text scales smoothly across
+     320px → 1440px+ without media-query steps. Tailwind utilities
+     text-xs … text-3xl are remapped to these via @theme inline so
+     existing class usage goes fluid automatically (C-AC5.2).
+  -------------------------------------------------------------- */
+  --font-size-xs:   clamp(0.6875rem, 0.65rem + 0.2vw, 0.75rem);    /* 11–12px */
+  --font-size-sm:   clamp(0.8125rem, 0.78rem + 0.2vw, 0.875rem);   /* 13–14px */
+  --font-size-base: clamp(0.9375rem, 0.91rem + 0.2vw, 1rem);       /* 15–16px */
+  --font-size-lg:   clamp(1.0625rem, 1rem    + 0.4vw, 1.125rem);   /* 17–18px */
+  --font-size-xl:   clamp(1.1875rem, 1.1rem  + 0.5vw, 1.25rem);    /* 19–20px */
+  --font-size-2xl:  clamp(1.375rem,  1.2rem  + 1vw,   1.625rem);   /* 22–26px */
+  --font-size-3xl:  clamp(1.625rem,  1.4rem  + 1.5vw, 2rem);       /* 26–32px */
+
+  /* --------------------------------------------------------------
+     Radii (rem-based so they scale with the fluid font)
+  -------------------------------------------------------------- */
+  --radius-sm:   0.25rem;  /* 4px  — chips, badges */
+  --radius-md:   0.5rem;   /* 8px  — inputs */
+  --radius-lg:   0.75rem;  /* 12px — cards */
+  --radius-xl:   1rem;     /* 16px — sheets/dialogs */
+  --radius-2xl:  1.5rem;   /* 24px — floating panels */
+
+  /* --------------------------------------------------------------
+     Shadows
+  -------------------------------------------------------------- */
+  --shadow-sm:    0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md:    0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg:    0 12px 32px -8px rgb(0 0 0 / 0.12), 0 4px 12px -4px rgb(0 0 0 / 0.06);
+  --shadow-ring:  0 0 0 2px var(--accent), 0 0 0 4px var(--background);
+
+  /* --------------------------------------------------------------
+     Blur radii (capped at 24px per perf guidance)
+  -------------------------------------------------------------- */
+  --blur-sm:  8px;
+  --blur-md:  14px;
+  --blur-lg:  24px;
+
+  /* --------------------------------------------------------------
+     Glass surfaces — defined once; the color-mix() formula
+     re-evaluates per cascade context, so the dark theme's
+     --background override flows through automatically.
+     AA contrast notes:
+     - --surface-floating + --foreground passes AA against
+       worst-case bright map tile; --muted-foreground FAILS on
+       floating in both themes → don't use it there.
+     - --surface-elevated + both --foreground and
+       --muted-foreground pass AA.
+     - --surface-solid is effectively opaque → all current text
+       colours remain compliant.
+  -------------------------------------------------------------- */
+  --surface-floating: color-mix(in srgb, var(--background) 65%, transparent);
+  --surface-elevated: color-mix(in srgb, var(--background) 82%, transparent);
+  --surface-solid:    color-mix(in srgb, var(--background) 96%, transparent);
 }
 
 @theme inline {
@@ -30,10 +98,48 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --font-sans: var(--font-sans);
+
+  /* Remap Tailwind's font-size utilities onto the fluid scale (C-AC5.2). */
+  --text-xs:   var(--font-size-xs);
+  --text-sm:   var(--font-size-sm);
+  --text-base: var(--font-size-base);
+  --text-lg:   var(--font-size-lg);
+  --text-xl:   var(--font-size-xl);
+  --text-2xl:  var(--font-size-2xl);
+  --text-3xl:  var(--font-size-3xl);
+
+  --radius-sm:  var(--radius-sm);
+  --radius-md:  var(--radius-md);
+  --radius-lg:  var(--radius-lg);
+  --radius-xl:  var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+
+  --shadow-sm:  var(--shadow-sm);
+  --shadow-md:  var(--shadow-md);
+  --shadow-lg:  var(--shadow-lg);
+
+  --color-surface-floating: var(--surface-floating);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-solid:    var(--surface-solid);
 }
 
+/* ------------------------------------------------------------------
+   Theme resolution (C-11).
+
+   The inline <head> script in `app/layout.tsx` sets `data-theme` on
+   <html> before paint based on:
+     1. localStorage `graetzl:theme` ("light" | "dark"), if set
+     2. else `prefers-color-scheme`
+
+   Two CSS hooks for dark mode:
+     • @media (prefers-color-scheme: dark) — system default, but
+       suppressed if the user has explicitly forced light via the
+       `/me` toggle (`[data-theme="light"]` opts out).
+     • :root[data-theme="dark"] — user-forced dark, wins even on a
+       light-preferring system.
+------------------------------------------------------------------ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #0e0e10;
     --foreground: #ededed;
     --muted: #1a1a1d;
@@ -43,6 +149,34 @@
     --primary-foreground: #ffffff;
     --accent: #3aa3a3;
     --accent-foreground: #ffffff;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #0e0e10;
+  --foreground: #ededed;
+  --muted: #1a1a1d;
+  --muted-foreground: #9a9a9e;
+  --border: #26262a;
+  --primary: #d04640;
+  --primary-foreground: #ffffff;
+  --accent: #3aa3a3;
+  --accent-foreground: #ffffff;
+}
+
+/* ------------------------------------------------------------------
+   Reduced motion (C-AC3.3).
+   Collapses every transition / animation to ≤ 1ms when the user
+   has opted out. Includes pseudo-elements and scroll-behavior.
+------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -57,9 +191,34 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-/* MapLibre tweaks so attribution doesn't clash with our chrome */
+/* MapLibre tweaks so attribution doesn't clash with our chrome.
+   C-10: bg uses the background token so dark-mode doesn't paint
+   a white card. color-mix gives us the 70% translucent effect
+   against either background colour. */
 .maplibregl-ctrl-attrib {
   font-size: 11px;
-  background: rgba(255, 255, 255, 0.7);
+  background: color-mix(in srgb, var(--background) 70%, transparent);
   backdrop-filter: blur(4px);
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--foreground);
+}
+
+/* ------------------------------------------------------------------
+   Glass surface fallbacks (T2).
+   1. No backdrop-filter support: collapse translucency to flat surface.
+   2. User prefers reduced transparency: same flattening.
+   Both rules are identical in effect; they're kept separate so the
+   intent of each remains explicit for future maintainers.
+------------------------------------------------------------------ */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bg-surface-floating { background-color: var(--background); }
+  .bg-surface-elevated { background-color: var(--background); }
+  .bg-surface-solid    { background-color: var(--background); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .bg-surface-floating,
+  .bg-surface-elevated,
+  .bg-surface-solid { background-color: var(--background); }
 }

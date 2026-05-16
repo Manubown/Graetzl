@@ -83,3 +83,75 @@ export async function updateProfileAndRedirect(formData: FormData) {
   if (!result.ok) throw new Error(result.error);
   redirect(`/u/${result.handle}`);
 }
+
+// ---------------------------------------------------------------------------
+// chooseInitialHandle
+// ---------------------------------------------------------------------------
+
+const DEFAULT_HANDLE_RE = /^wiener_[0-9a-f]{8}$/;
+
+/**
+ * First-time handle selection — gated by the forced handle-picker on
+ * /onboarding/handle. Distinct from updateProfile because the onboarding
+ * form only collects a handle (no bio/home_city), and we explicitly
+ * reject the auto-generated default to force a real choice.
+ *
+ * Return type is intentionally narrow (only the error variant) because
+ * the success path always redirects — the caller never sees a success value.
+ */
+export async function chooseInitialHandle(
+  formData: FormData,
+): Promise<{ ok: false; error: string }> {
+  const handle = String(formData.get("handle") ?? "").trim().toLowerCase();
+
+  // Format check — reuse the existing HANDLE_RE defined at the top of this file.
+  if (!HANDLE_RE.test(handle)) {
+    return {
+      ok: false,
+      error:
+        "Handle muss 3–30 Zeichen lang sein (Kleinbuchstaben, Zahlen, Unterstrich).",
+    };
+  }
+
+  // Reject the default — force a real choice.
+  if (DEFAULT_HANDLE_RE.test(handle)) {
+    return {
+      ok: false,
+      error: "Bitte wähle einen anderen Handle als den automatisch erzeugten.",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, error: "Bitte zuerst anmelden." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ handle })
+    .eq("id", user.id);
+
+  if (error) {
+    // 23505 = unique_violation (citext UNIQUE on handle)
+    if (
+      error.code === "23505" ||
+      error.message.toLowerCase().includes("duplicate")
+    ) {
+      return { ok: false, error: "Dieser Handle ist bereits vergeben." };
+    }
+    console.error("[chooseInitialHandle] update failed:", error);
+    return {
+      ok: false,
+      error: "Speichern fehlgeschlagen. Bitte erneut versuchen.",
+    };
+  }
+
+  // Refresh the layout (header reads the handle) and any cached profile pages
+  // so the new handle is visible immediately after redirect.
+  revalidatePath("/", "layout");
+  revalidatePath(`/u/${handle}`);
+  redirect("/");
+}

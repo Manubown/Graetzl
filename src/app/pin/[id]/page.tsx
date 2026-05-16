@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { fetchPinWithStats } from "@/lib/pins/fetch";
 import { PinDetail } from "@/components/pin/pin-detail";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -28,25 +31,22 @@ export default async function PinPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6">
-      <Link
-        href="/"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      <Button
+        asChild
+        variant="ghost"
+        size="sm"
+        className="mb-4 text-muted-foreground hover:text-foreground"
       >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
-        Zurück zur Karte
-      </Link>
-      <PinDetail pin={pin} />
+        <Link href="/">
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Zurück zur Karte
+        </Link>
+      </Button>
+      <Card className="border-border/50 bg-background/60 backdrop-blur-2xl">
+        <CardContent className="p-5">
+          <PinDetail pin={pin} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

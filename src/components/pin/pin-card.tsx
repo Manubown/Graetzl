@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Pin } from "@/lib/pins/types";
 import { CATEGORIES } from "@/lib/pins/constants";
+import { Badge } from "@/components/ui/badge";
 
 interface PinCardProps {
   pin: Pin;
@@ -14,7 +15,7 @@ export function PinCard({ pin }: PinCardProps) {
       href={`/pin/${pin.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-background transition-shadow hover:shadow-md"
     >
-      <div className="relative aspect-[4/3] w-full bg-muted">
+      <div className="relative aspect-[4/3] w-full border border-border bg-muted">
         {pin.photo_url ? (
           <Image
             src={pin.photo_url}
@@ -38,9 +39,9 @@ export function PinCard({ pin }: PinCardProps) {
           {pin.body}
         </p>
         {category && (
-          <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <Badge variant="secondary" className="mt-1 gap-1">
             {category.emoji} {category.label}
-          </span>
+          </Badge>
         )}
       </div>
     </Link>

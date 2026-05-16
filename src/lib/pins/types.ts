@@ -15,6 +15,13 @@ export interface Pin {
   created_at: string;
   lng: number;
   lat: number;
+  /**
+   * Vienna Bezirk (1..23) the pin's location falls inside, or `null`
+   * if outside any seeded district. Server-computed via ST_Contains at
+   * write time (createPin) and backfilled for existing rows by the
+   * B-4 migration. Exposed by the `pins_with_coords` view.
+   */
+  district_id: number | null;
 }
 
 export interface PinWithStats extends Pin {

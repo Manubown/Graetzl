@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { CATEGORIES, LANGUAGES } from "@/lib/pins/constants";
 import { createPin } from "@/lib/pins/actions";
 
@@ -193,20 +194,16 @@ export function DropPinModal({ open, onClose, coords }: DropPinModalProps) {
         {error && <p className="text-sm text-primary">{error}</p>}
 
         <div className="mt-2 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-lg px-4 py-2 text-sm text-muted-foreground hover:bg-muted"
-          >
+          <Button type="button" variant="ghost" onClick={handleClose}>
             Abbrechen
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
+            variant="primary"
             disabled={pending || photoUploading}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {pending ? "Wird gesetzt…" : "Pin setzen"}
-          </button>
+          </Button>
         </div>
       </form>
     </Dialog>

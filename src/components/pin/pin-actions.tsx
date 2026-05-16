@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Heart, Bookmark } from "lucide-react";
 import { toggleUpvote, toggleSave } from "@/lib/pins/actions";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface PinActionsProps {
@@ -60,41 +61,41 @@ export function PinActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={handleUpvote}
         disabled={pendingUpvote}
         aria-pressed={upvoted}
         aria-label={upvoted ? "Upvote entfernen" : "Upvoten"}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors disabled:opacity-60",
-          upvoted
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-border bg-background hover:bg-muted",
+          "h-9 rounded-full px-3",
+          upvoted && "border-primary bg-primary text-primary-foreground hover:opacity-90",
         )}
       >
         <Heart className={cn("h-4 w-4", upvoted && "fill-current")} />
         <span className="tabular-nums font-medium">{upvoteCount}</span>
-      </button>
+      </Button>
 
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={handleSave}
         disabled={pendingSave}
         aria-pressed={saved}
         aria-label={saved ? "Speichern entfernen" : "Pin speichern"}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors disabled:opacity-60",
-          saved
-            ? "border-accent bg-accent text-accent-foreground"
-            : "border-border bg-background hover:bg-muted",
+          "h-9 rounded-full px-3",
+          saved && "border-accent bg-accent text-accent-foreground hover:opacity-90",
         )}
       >
         <Bookmark className={cn("h-4 w-4", saved && "fill-current")} />
         <span className="hidden font-medium sm:inline">
           {saved ? "Gespeichert" : "Speichern"}
         </span>
-      </button>
+      </Button>
 
       {error && (
         <span className="ml-1 text-xs text-primary" role="alert">

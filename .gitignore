@@ -57,3 +57,8 @@ Thumbs.db
 _tmp_*
 graetzl-tmp/
 .write-test
+
+# Seed/staging area for DB-seed inputs (full-fidelity GeoJSON gets
+# embedded into migrations; the upstream source files are reproducible
+# from runbooks). Migrations themselves ARE committed.
+/seed/

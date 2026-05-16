@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import * as RadixDialog from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DialogProps {
@@ -17,9 +18,18 @@ interface DialogProps {
 }
 
 /**
- * Minimal modal dialog. Uses the native <dialog> element via
- * `showModal()` for free focus-trap, scrim, and Esc-to-close.
- * We add an explicit close button + click-on-backdrop handler.
+ * Modal dialog. C-4 refactor: drops the native `<dialog>` element in
+ * favour of Radix Dialog, which gives us a portal, focus-trap, scroll
+ * lock, Escape-to-close, and overlay click-out — all behaviours we
+ * previously hand-rolled.
+ *
+ * Public API is preserved exactly: `open`, `onClose`, `title`,
+ * `className`, `children`. Call-sites (`PinDetailModal`,
+ * `DropPinModal`, `ReportModal`, `ProfileEditModal`) change zero
+ * lines. The `onOpenChange(open) → !open && onClose()` translation
+ * means backdrop click / Escape / X-button all funnel through
+ * `onClose`, so `router.back()` in the intercepting-route modal
+ * still works.
  */
 export function Dialog({
   open,
@@ -28,67 +38,59 @@ export function Dialog({
   title,
   className,
 }: DialogProps) {
-  const ref = useRef<HTMLDialogElement | null>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) el.close();
-  }, [open]);
-
-  // Close via Escape or native cancel → propagate to parent.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const onCancel = (e: Event) => {
-      e.preventDefault();
-      onClose();
-    };
-    el.addEventListener("cancel", onCancel);
-    return () => el.removeEventListener("cancel", onCancel);
-  }, [onClose]);
-
   return (
-    <dialog
-      ref={ref}
-      onClick={(e) => {
-        // Click on backdrop (i.e. on the dialog element itself, not its
-        // content) → close.
-        if (e.target === ref.current) onClose();
+    <RadixDialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
-      className={cn(
-        "fixed inset-0 m-auto w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-border bg-background p-0 text-foreground shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm",
-        className,
-      )}
-      aria-labelledby="dialog-title"
     >
-      <div className="flex items-center justify-between border-b border-border px-5 py-3">
-        <h2 id="dialog-title" className="text-base font-semibold tracking-tight">
-          {title}
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Schließen"
-          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+      <RadixDialog.Portal>
+        <RadixDialog.Overlay
+          className={cn(
+            // Light dimming + subtle blur so the dialog's own glass effect
+            // (bg-background/80 backdrop-blur-xl on Content) actually has
+            // something visible behind to blur — heavy overlay opacity
+            // washes out the glassmorphism.
+            "fixed inset-0 z-40 bg-black/20 backdrop-blur-sm",
+            "duration-[var(--motion-default)] ease-[var(--motion-ease)]",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+          )}
+        />
+        <RadixDialog.Content
+          aria-describedby={undefined}
+          className={cn(
+            "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
+            "w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-border/50 bg-background/60 p-0 text-foreground shadow-2xl backdrop-blur-2xl",
+            "duration-[var(--motion-default)] ease-[var(--motion-ease)]",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+            "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
+            "focus:outline-none",
+            className,
+          )}
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 6L6 18" />
-            <path d="M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div className="px-5 py-4">{children}</div>
-    </dialog>
+          <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+            <RadixDialog.Title className="text-base font-semibold tracking-tight">
+              {title}
+            </RadixDialog.Title>
+            <RadixDialog.Close
+              aria-label="Schließen"
+              className={cn(
+                "rounded-md p-1 text-muted-foreground",
+                "transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)]",
+                "hover:bg-muted hover:text-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                "focus-visible:ring-[var(--accent)] dark:focus-visible:ring-[var(--primary)]",
+              )}
+            >
+              <X className="h-[18px] w-[18px]" />
+            </RadixDialog.Close>
+          </div>
+          <div className="px-5 py-4">{children}</div>
+        </RadixDialog.Content>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
   );
 }

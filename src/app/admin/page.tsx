@@ -96,7 +96,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                   </p>
                   {r.notes && (
                     <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
-                      „{r.notes}"
+                      &bdquo;{r.notes}&ldquo;
                     </p>
                   )}
 

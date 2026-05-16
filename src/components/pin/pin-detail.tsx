@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { PinWithStats } from "@/lib/pins/types";
 import { CATEGORIES } from "@/lib/pins/constants";
+import { Badge } from "@/components/ui/badge";
 import { PinActions } from "./pin-actions";
 import { ReportButton } from "./report-button";
 
@@ -37,9 +38,9 @@ export function PinDetail({ pin }: PinDetailProps) {
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">{pin.title}</h1>
         {category && (
-          <span className="shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+          <Badge variant="secondary" className="shrink-0">
             {category.emoji} {category.label}
-          </span>
+          </Badge>
         )}
       </div>
 

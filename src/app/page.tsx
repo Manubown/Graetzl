@@ -4,6 +4,8 @@ import { FilterBar } from "@/components/map/filter-bar";
 import { WelcomeCard } from "@/components/welcome-card";
 import { fetchPinsInBbox } from "@/lib/pins/fetch";
 import type { Pin } from "@/lib/pins/types";
+import { getDistricts } from "@/lib/districts/use-districts";
+import type { DistrictSummary } from "@/lib/districts/use-districts";
 
 /**
  * The page always touches cookies via Supabase auth, so it's already
@@ -14,18 +16,23 @@ export const dynamic = "force-dynamic";
 
 /**
  * Home page. Server-fetches all visible pins in Vienna once; the client
- * MapShell + FilterBar apply URL-driven filters on top of that.
- *
- * MapShell and FilterBar both call `useSearchParams()`, which Next
- * requires to be inside a Suspense boundary to allow the rest of the
- * tree to stream during SSR. The Suspense fallbacks are nearly empty
- * because both components mount quickly client-side.
+ * MapShell + FilterBar apply URL-driven filters (category, language) on
+ * top of that. District polygons are decorative + zoom-on-click only —
+ * they never filter pins and never write to the URL.
  */
 export default async function HomePage() {
   let pins: Pin[] = [];
+  let districts: DistrictSummary[] = [];
   let dataError = false;
+
   try {
-    pins = await fetchPinsInBbox();
+    [pins, districts] = await Promise.all([
+      fetchPinsInBbox(),
+      getDistricts().catch((err) => {
+        console.error("[home] getDistricts failed:", err);
+        return [] as DistrictSummary[];
+      }),
+    ]);
   } catch (err) {
     console.error("[home] fetchPinsInBbox failed:", err);
     dataError = true;
@@ -40,7 +47,7 @@ export default async function HomePage() {
           </div>
         }
       >
-        <MapShell pins={pins} />
+        <MapShell pins={pins} districts={districts} />
       </Suspense>
 
       <Suspense fallback={null}>

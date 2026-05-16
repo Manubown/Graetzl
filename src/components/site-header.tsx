@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { PigeonMark } from "@/components/pigeon-mark";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
 import { fetchCurrentProfile } from "@/lib/profiles/fetch";
 import { getAdminUids } from "@/lib/admin/guard";
 
@@ -14,7 +16,7 @@ export async function SiteHeader() {
     profile !== null && getAdminUids().includes(profile.id);
 
   return (
-    <header className="sticky top-0 z-30 flex h-12 w-full items-center justify-between border-b border-border bg-background/85 px-3 backdrop-blur-md sm:h-14 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-12 w-full items-center justify-between border-b border-border/60 bg-background/75 px-3 backdrop-blur-xl sm:h-14 sm:px-4">
       <Link
         href="/"
         className="flex items-center gap-1.5 sm:gap-2"
@@ -30,6 +32,7 @@ export async function SiteHeader() {
       </Link>
 
       <nav className="flex items-center gap-1 text-sm sm:gap-2">
+        <ThemeToggle />
         {profile ? (
           <>
             {isAdmin && (
@@ -49,12 +52,9 @@ export async function SiteHeader() {
             <SignOutButton />
           </>
         ) : (
-          <Link
-            href="/sign-in"
-            className="rounded-full bg-foreground px-3.5 py-1.5 text-sm text-background transition-opacity hover:opacity-90"
-          >
-            Anmelden
-          </Link>
+          <Button asChild size="sm" className="rounded-full">
+            <Link href="/sign-in">Anmelden</Link>
+          </Button>
         )}
       </nav>
     </header>

@@ -22,7 +22,38 @@ export async function fetchPinsInBbox(
     max_lat: bbox.maxLat,
     max_rows: maxRows,
   });
-  if (error) throw error;
+  if (error) {
+    throw new Error(
+      `pins_in_bbox failed [${error.code ?? "?"}]: ${error.message}${error.hint ? ` — hint: ${error.hint}` : ""}`,
+    );
+  }
+  return (data ?? []) as Pin[];
+}
+
+/**
+ * Bezirk-aware variant of fetchPinsInBbox. Calls `pins_in_bbox_filtered`
+ * which accepts an optional `p_bezirk` argument. When bezirk is null,
+ * the RPC behaves identically to `pins_in_bbox` (no district filter).
+ */
+export async function fetchPinsInBboxFiltered(
+  bbox: Bbox = VIENNA_BBOX,
+  bezirk: number | null = null,
+  maxRows = 500,
+): Promise<Pin[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("pins_in_bbox_filtered", {
+    min_lng: bbox.minLng,
+    min_lat: bbox.minLat,
+    max_lng: bbox.maxLng,
+    max_lat: bbox.maxLat,
+    p_bezirk: bezirk,
+    max_rows: maxRows,
+  });
+  if (error) {
+    throw new Error(
+      `pins_in_bbox_filtered failed [${error.code ?? "?"}]: ${error.message}${error.hint ? ` — hint: ${error.hint}` : ""}`,
+    );
+  }
   return (data ?? []) as Pin[];
 }
 
