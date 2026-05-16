@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics/plausible";
+import { checkPassword } from "@/lib/auth/password";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 
 type PageStatus =
   | "exchanging"
@@ -14,28 +16,6 @@ type PageStatus =
   | "expired"
   | "submitting"
   | "success";
-
-const PASSWORD_MIN = 12;
-const PASSWORD_MAX = 72;
-
-function validatePassword(value: string): string | null {
-  if (value.length < PASSWORD_MIN) {
-    return `Passwort muss mindestens ${PASSWORD_MIN} Zeichen lang sein.`;
-  }
-  if (value.length > PASSWORD_MAX) {
-    return "Passwort ist zu lang.";
-  }
-  if (!/[A-Z]/.test(value)) {
-    return "Passwort muss mindestens einen Großbuchstaben enthalten.";
-  }
-  if (!/[a-z]/.test(value)) {
-    return "Passwort muss mindestens einen Kleinbuchstaben enthalten.";
-  }
-  if (!/[0-9]/.test(value)) {
-    return "Passwort muss mindestens eine Zahl enthalten.";
-  }
-  return null;
-}
 
 export function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -52,8 +32,16 @@ export function ResetPasswordForm() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Strict Mode in dev double-invokes effects; exchangeCodeForSession
+  // consumes the PKCE code on the first call, so the second call returns
+  // "code already used" and flips the form to `expired` even though a
+  // valid session was actually created. Guard with a ref so the call
+  // fires exactly once per mount.
+  const exchangedRef = useRef(false);
   useEffect(() => {
     if (!code) return;
+    if (exchangedRef.current) return;
+    exchangedRef.current = true;
 
     const supabase = createClient();
     supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
@@ -65,9 +53,9 @@ export function ResetPasswordForm() {
     e.preventDefault();
     setFieldError(null);
 
-    const err = validatePassword(password);
-    if (err) {
-      setFieldError(err);
+    const check = checkPassword(password);
+    if (!check.ok) {
+      setFieldError(check.error ?? "Passwort entspricht nicht den Anforderungen.");
       return;
     }
     if (password !== confirmPassword) {
@@ -128,8 +116,7 @@ export function ResetPasswordForm() {
 
   const isLoading = pending || pageStatus === "submitting";
   const canSubmit =
-    password.length >= PASSWORD_MIN &&
-    password.length <= PASSWORD_MAX &&
+    checkPassword(password).ok &&
     confirmPassword.length > 0 &&
     !isLoading;
 
@@ -178,6 +165,9 @@ export function ResetPasswordForm() {
               )}
             </button>
           </div>
+          {password.length > 0 && (
+            <PasswordRequirements value={password} className="mt-1.5" />
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">

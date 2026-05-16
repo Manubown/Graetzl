@@ -155,6 +155,110 @@ export async function createPinAndRedirect(formData: FormData) {
   redirect(`/pin/${result.pinId}`);
 }
 
+export type UpdatePinResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Update an existing pin's editable metadata. Mirrors createPin's
+ * validation rules with two differences:
+ *   • author_id is NOT changed (immutable; verified against caller via RLS)
+ *   • location / precision / district_id are NOT editable — pin moves
+ *     are a conceptually different operation (would invalidate
+ *     district_id, ST_Contains assumptions, and the existing
+ *     district pin_count_cached without trigger re-fire)
+ *
+ * Returns the same shape as createPin's error path so the modal can
+ * surface the message. Pin authorship is enforced both here (defensive
+ * check) and by RLS (`pins_update_self`).
+ */
+export async function updatePin(
+  pinId: string,
+  formData: FormData,
+): Promise<UpdatePinResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
+  if (userErr || !user) {
+    return { ok: false, error: "Bitte zuerst anmelden." };
+  }
+
+  // Defensive check: the pin must exist and be owned by the caller.
+  // RLS would reject the UPDATE silently otherwise, returning an
+  // undifferentiated empty result that's hard to distinguish from
+  // "no fields changed".
+  const { data: existing, error: probeErr } = await supabase
+    .from("pins")
+    .select("author_id")
+    .eq("id", pinId)
+    .maybeSingle();
+  if (probeErr) return { ok: false, error: probeErr.message };
+  if (!existing) return { ok: false, error: "Pin nicht gefunden." };
+  if (existing.author_id !== user.id) {
+    return { ok: false, error: "Du kannst nur eigene Pins bearbeiten." };
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  const category = String(formData.get("category") ?? "") as Category;
+  const language = String(formData.get("language") ?? "de");
+  // photo_url has three states: empty string = remove photo, null = no
+  // change, non-empty string = new photo URL. The form sends an explicit
+  // `photo_action` field to disambiguate "remove" vs "keep" without
+  // requiring the existing URL to round-trip through the client.
+  const photoAction = String(formData.get("photo_action") ?? "keep");
+  const newPhotoUrl = String(formData.get("photo_url") ?? "").trim() || null;
+
+  if (title.length < 1 || title.length > 80) {
+    return { ok: false, error: "Titel muss 1–80 Zeichen lang sein." };
+  }
+  if (body.length < 1 || body.length > 500) {
+    return { ok: false, error: "Beschreibung muss 1–500 Zeichen lang sein." };
+  }
+  if (!VALID_CATEGORIES.includes(category)) {
+    return { ok: false, error: "Ungültige Kategorie." };
+  }
+  if (!VALID_LANGUAGES.includes(language)) {
+    return { ok: false, error: "Ungültige Sprache." };
+  }
+  if (newPhotoUrl !== null && !isOwnPinPhotoUrl(newPhotoUrl, user.id)) {
+    return { ok: false, error: "Foto-URL ist ungültig." };
+  }
+
+  const updates: Record<string, unknown> = {
+    title,
+    body,
+    category,
+    language,
+  };
+  if (photoAction === "remove") {
+    updates.photo_url = null;
+  } else if (photoAction === "replace" && newPhotoUrl !== null) {
+    updates.photo_url = newPhotoUrl;
+  }
+  // photoAction === "keep" → photo_url untouched
+
+  const { error } = await supabase
+    .from("pins")
+    .update(updates)
+    .eq("id", pinId)
+    .eq("author_id", user.id);
+
+  if (error) {
+    console.error("[updatePin] update failed:", error);
+    return {
+      ok: false,
+      error: error.message ?? "Pin konnte nicht gespeichert werden.",
+    };
+  }
+
+  revalidatePath(`/pin/${pinId}`);
+  revalidatePath("/");
+  return { ok: true };
+}
+
 /**
  * Toggle the current user's upvote on a pin.
  *

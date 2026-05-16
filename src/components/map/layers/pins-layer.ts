@@ -1,5 +1,6 @@
 import type maplibregl from "maplibre-gl";
 import type { Pin } from "@/lib/pins/types";
+import { isCuratedPin } from "@/lib/pins/system";
 
 /**
  * Pins layer module — owns the GeoJSON source for pins, the cluster
@@ -10,9 +11,24 @@ import type { Pin } from "@/lib/pins/types";
  * Layer ordering note: the districts layer (added later in B-10) will
  * be inserted *below* `clusters` via `map.addLayer(spec, "clusters")`,
  * so pins always paint on top of the polygon fill/line.
+ *
+ * Visual hierarchy for curated vs. user pins:
+ *   • User pins  — Wiener Rot fill, full opacity, radius 8
+ *   • Curated    — muted-grey fill, slightly translucent, same radius
+ * Cluster colour stays red regardless of contents — a cluster represents
+ * pins of any source and falling back to gray when a few curated pins
+ * happen to aggregate would mute the wrong signal.
  */
 
 export const PINS_SOURCE_ID = "graetzl-pins";
+
+const USER_PIN_COLOR = "#b3322c";
+const CURATED_PIN_COLOR = "#7a7a7e";
+// Donau Türkis — matches --accent in light mode. Hardcoded here because
+// MapLibre paint expressions don't accept CSS vars, and re-resolving on
+// theme switch would require dropping/re-adding the layer; the slight
+// shade difference vs dark-mode --accent (#3aa3a3) is acceptable.
+const SPECIAL_RING_COLOR = "#2e8a8a";
 
 export interface AttachPinsLayerOpts {
   /**
@@ -30,7 +46,13 @@ function pinsToFeatureCollection(
     features: pins.map((p) => ({
       type: "Feature",
       geometry: { type: "Point", coordinates: [p.lng, p.lat] },
-      properties: { id: p.id, title: p.title, category: p.category },
+      properties: {
+        id: p.id,
+        title: p.title,
+        category: p.category,
+        is_curated: isCuratedPin(p.author_id),
+        is_special: p.is_special,
+      },
     })),
   };
 }
@@ -90,6 +112,29 @@ export function attachPinsLayer(
     });
   }
 
+  // Special-pin halo — soft türkis glow behind special pins. Sits below
+  // pin-point so the marker paints on top. Filtered to is_special only
+  // so non-special pins don't carry the cost.
+  if (!map.getLayer("pin-special-halo")) {
+    map.addLayer({
+      id: "pin-special-halo",
+      type: "circle",
+      source: PINS_SOURCE_ID,
+      filter: [
+        "all",
+        ["!", ["has", "point_count"]],
+        ["==", ["get", "is_special"], true],
+      ],
+      paint: {
+        "circle-color": SPECIAL_RING_COLOR,
+        "circle-radius": 18,
+        "circle-opacity": 0.35,
+        "circle-blur": 0.6,
+        "circle-stroke-width": 0,
+      },
+    });
+  }
+
   if (!map.getLayer("pin-point")) {
     map.addLayer({
       id: "pin-point",
@@ -97,10 +142,35 @@ export function attachPinsLayer(
       source: PINS_SOURCE_ID,
       filter: ["!", ["has", "point_count"]],
       paint: {
-        "circle-color": "#b3322c",
-        "circle-radius": 8,
-        "circle-stroke-color": "#ffffff",
-        "circle-stroke-width": 2,
+        // Special wins over curated: a special pin always paints Wiener
+        // Rot so the editorial endorsement reads even on a curated row.
+        "circle-color": [
+          "case",
+          ["==", ["get", "is_special"], true], USER_PIN_COLOR,
+          ["==", ["get", "is_curated"], true], CURATED_PIN_COLOR,
+          USER_PIN_COLOR,
+        ],
+        "circle-opacity": [
+          "case",
+          ["==", ["get", "is_special"], true], 1,
+          ["==", ["get", "is_curated"], true], 0.85,
+          1,
+        ],
+        "circle-radius": [
+          "case",
+          ["==", ["get", "is_special"], true], 10,
+          8,
+        ],
+        "circle-stroke-color": [
+          "case",
+          ["==", ["get", "is_special"], true], SPECIAL_RING_COLOR,
+          "#ffffff",
+        ],
+        "circle-stroke-width": [
+          "case",
+          ["==", ["get", "is_special"], true], 3,
+          2,
+        ],
       },
     });
   }

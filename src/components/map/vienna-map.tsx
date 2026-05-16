@@ -36,6 +36,7 @@ const CUSTOM_LAYER_IDS = new Set([
   "districts-fill-selected",
   "districts-line",
   "clusters",
+  "pin-special-halo",
   "pin-point",
 ]);
 

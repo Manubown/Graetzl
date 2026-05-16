@@ -14,7 +14,20 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+/**
+ * Resolve the canonical site origin for absolute metadata URLs (og:url,
+ * canonical, etc). Precedence: explicit NEXT_PUBLIC_SITE_URL → Vercel's
+ * auto-injected VERCEL_URL → localhost for dev. Setting this here means
+ * page-level metadata can pass relative paths and Next.js resolves them.
+ */
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Grätzl — locals' city map",
     template: "%s · Grätzl",
@@ -25,6 +38,20 @@ export const metadata: Metadata = {
   authors: [{ name: "Grätzl" }],
   keywords: ["Vienna", "Wien", "city map", "local", "non-commercial", "Grätzl"],
   robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    siteName: "Grätzl",
+    locale: "de_AT",
+    title: "Grätzl — locals' city map",
+    description:
+      "The anti-TripAdvisor: a non-commercial, locally-curated map of Vienna.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Grätzl",
+    description:
+      "The anti-TripAdvisor: a non-commercial, locally-curated map of Vienna.",
+  },
 };
 
 /**

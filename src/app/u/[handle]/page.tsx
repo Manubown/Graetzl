@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Settings } from "lucide-react";
 import {
   fetchProfileWithStats,
   fetchCurrentProfile,
@@ -9,6 +10,7 @@ import {
 import { PinCard } from "@/components/pin/pin-card";
 import { PigeonMark } from "@/components/pigeon-mark";
 import { ProfileEditButton } from "@/components/profile/profile-edit-button";
+import { Button } from "@/components/ui/button";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
@@ -60,11 +62,19 @@ export default async function ProfilePage({ params }: PageProps) {
               @{profile.handle}
             </h1>
             {isOwner && (
-              <ProfileEditButton
-                handle={profile.handle}
-                bio={profile.bio}
-                home_city={profile.home_city}
-              />
+              <>
+                <ProfileEditButton
+                  handle={profile.handle}
+                  bio={profile.bio}
+                  home_city={profile.home_city}
+                />
+                <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
+                  <Link href="/me" aria-label="Konto-Einstellungen">
+                    <Settings className="h-3.5 w-3.5" />
+                    Einstellungen
+                  </Link>
+                </Button>
+              </>
             )}
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">

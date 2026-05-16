@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { safePath } from "@/lib/auth/safe-path";
 
 /**
  * Sign the current user out and redirect to home.
@@ -14,19 +15,6 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/");
-}
-
-/**
- * Guard: accept only same-origin relative paths to prevent open redirects
- * (CWE-601). Inline copy — the authoritative version lives in
- * src/app/auth/callback/route.ts; T4 agent may consolidate later.
- */
-function isSafePath(value: string | null | undefined): string {
-  const v = value ?? "";
-  if (!v.startsWith("/")) return "/";
-  if (v.startsWith("//") || v.startsWith("/\\")) return "/";
-  if (v.includes("\\")) return "/";
-  return v;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +146,7 @@ export async function signInWithPassword(
   // On success, revalidate the root layout so the session propagates to all
   // server components (e.g. the site header's sign-out button appears).
   revalidatePath("/", "layout");
-  redirect(isSafePath(next));
+  redirect(safePath(next));
 }
 
 // ---------------------------------------------------------------------------
@@ -191,27 +179,40 @@ export async function requestPasswordReset(
 // ---------------------------------------------------------------------------
 
 /**
- * Update the currently-authenticated user's password.
- * Called from /me/settings/password — the user must already have a session
- * (established via the recovery link → auth/callback → session exchange).
+ * Update the currently-authenticated user's password. Works for both
+ * "set first password" (magic-link-only accounts) and "change existing
+ * password" — Supabase Auth treats both as the same updateUser call.
+ *
+ * Called from /me/settings/password (signed-in user) and the recovery
+ * landing page (after exchangeCodeForSession established a session).
+ *
+ * Full complexity policy enforced server-side via the shared
+ * `checkPassword` validator (lib/auth/password.ts).
  */
 export async function updateOwnPassword(
   formData: FormData,
 ): Promise<AuthResult> {
+  const { checkPassword } = await import("@/lib/auth/password");
   const password = String(formData.get("password") ?? "");
 
-  if (password.length < 12 || password.length > 72) {
-    return {
-      ok: false,
-      error: "Passwort muss mindestens 12 Zeichen lang sein.",
-    };
+  const check = checkPassword(password);
+  if (!check.ok) {
+    return { ok: false, error: check.error ?? "Passwort entspricht nicht den Anforderungen." };
   }
 
   const supabase = await createClient();
-
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {
+    // HIBP rejection surfaces here when Supabase Auth declines the password.
+    const msg = error.message.toLowerCase();
+    if (msg.includes("pwned") || msg.includes("breach") || msg.includes("compromised")) {
+      return {
+        ok: false,
+        error:
+          "Dieses Passwort ist in einem bekannten Datenleck enthalten. Bitte wähle ein anderes.",
+      };
+    }
     return {
       ok: false,
       error: "Passwort konnte nicht gespeichert werden. Bitte erneut versuchen.",

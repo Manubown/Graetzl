@@ -43,7 +43,7 @@ export function MapShell({ pins, districts }: MapShellProps) {
   >(null);
 
   const filteredPins = useMemo(
-    () => applyFilters(pins, { ...filters, bezirk: null }),
+    () => applyFilters(pins, filters),
     [pins, filters],
   );
 

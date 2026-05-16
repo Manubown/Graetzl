@@ -46,6 +46,34 @@ export async function unhidePin(pinId: string): Promise<AdminActionResult> {
 }
 
 /**
+ * Mark a pin as a "Geheimtipp" (or clear the flag). Admin-only;
+ * regular users cannot self-mark even via the bare REST API because
+ * no RLS policy permits UPDATEs to is_special. The service-role
+ * client used here bypasses RLS — the requireAdmin() check above is
+ * the sole gate.
+ */
+export async function setPinSpecial(
+  pinId: string,
+  isSpecial: boolean,
+): Promise<AdminActionResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { ok: false, error: "Nicht berechtigt." };
+  }
+  const sb = adminSupabase();
+  const { error } = await sb
+    .from("pins")
+    .update({ is_special: isSpecial })
+    .eq("id", pinId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin");
+  revalidatePath(`/pin/${pinId}`);
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/**
  * Update a report's status (reviewed / dismissed).
  */
 export async function setReportStatus(

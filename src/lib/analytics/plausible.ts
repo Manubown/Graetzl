@@ -25,7 +25,6 @@ type EventProps = {
   auth_reset_completed: undefined;
   auth_signup_completed: { method: "password" | "magiclink" };
   auth_password_reset_requested: undefined;
-  filter_bezirk_set: { bezirk: number };
   district_click: { bezirk: number };
   polygon_layer_painted: { duration_ms: number };
   theme_resolved: { theme: "light" | "dark" };

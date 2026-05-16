@@ -12,6 +12,12 @@ export interface Pin {
   city: string;
   photo_url: string | null;
   is_hidden: boolean;
+  /**
+   * Admin-marked "Geheimtipp" flag (D-3). Flipped via setPinSpecial in
+   * lib/admin/actions.ts; regular users cannot self-mark.
+   * Used on the map (accent ring + halo) and detail page (badge).
+   */
+  is_special: boolean;
   created_at: string;
   lng: number;
   lat: number;

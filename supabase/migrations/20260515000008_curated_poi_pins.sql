@@ -117,7 +117,7 @@ begin
      'art_history', 'de',
      ST_GeogFromText('SRID=4326;POINT(16.3725 48.2086)'),
      'exact', 'Vienna',
-     'https://commons.wikimedia.org/wiki/Special:FilePath/Stephansdom_Wien_2018.jpg?width=1200',
+     'https://commons.wikimedia.org/wiki/Special:FilePath/Wien_-_Stephansdom_%281%29.JPG?width=1200',
      district_at_point(16.3725, 48.2086)),
 
     (v_system_uid, 'Schloss Schönbrunn',
@@ -141,7 +141,7 @@ begin
      'art_history', 'de',
      ST_GeogFromText('SRID=4326;POINT(16.3651 48.2079)'),
      'exact', 'Vienna',
-     'https://commons.wikimedia.org/wiki/Special:FilePath/Hofburg_Vienna_Heldenplatz.jpg?width=1200',
+     'https://commons.wikimedia.org/wiki/Special:FilePath/ETH-BIB-Hofburg%2C_Wien-Weitere-LBS_MH02-30-0012.tif?width=1200',
      district_at_point(16.3651, 48.2079)),
 
     (v_system_uid, 'Karlskirche',
@@ -182,7 +182,7 @@ begin
      'view', 'de',
      ST_GeogFromText('SRID=4326;POINT(16.3962 48.2161)'),
      'exact', 'Vienna',
-     'https://commons.wikimedia.org/wiki/Special:FilePath/Wiener_Riesenrad.jpg?width=1200',
+     'https://commons.wikimedia.org/wiki/Special:FilePath/Wien_Riesenrad.jpg?width=1200',
      district_at_point(16.3962, 48.2161)),
 
     (v_system_uid, 'Donauturm',
@@ -206,7 +206,7 @@ begin
      'view', 'de',
      ST_GeogFromText('SRID=4326;POINT(16.4180 48.2350)'),
      'approximate', 'Vienna',
-     'https://commons.wikimedia.org/wiki/Special:FilePath/Donauinsel.jpg?width=1200',
+     'https://commons.wikimedia.org/wiki/Special:FilePath/Wien_-_Donauinsel_mit_den_Donaubr%C3%BCcken.JPG?width=1200',
      district_at_point(16.4180, 48.2350)),
 
     (v_system_uid, 'Donaukanal',
@@ -223,7 +223,7 @@ begin
      'other', 'de',
      ST_GeogFromText('SRID=4326;POINT(16.3796 48.2050)'),
      'exact', 'Vienna',
-     'https://commons.wikimedia.org/wiki/Special:FilePath/Stadtpark_Wien.jpg?width=1200',
+     'https://commons.wikimedia.org/wiki/Special:FilePath/Vienna_Stadtpark_from_above.jpg?width=1200',
      district_at_point(16.3796, 48.2050)),
 
     (v_system_uid, 'Volksgarten',
@@ -255,7 +255,7 @@ begin
      'other', 'de',
      ST_GeogFromText('SRID=4326;POINT(16.3416 48.2382)'),
      'exact', 'Vienna',
-     'https://commons.wikimedia.org/wiki/Special:FilePath/T%C3%BCrkenschanzpark.jpg?width=1200',
+     'https://commons.wikimedia.org/wiki/Special:FilePath/Tuerkenschanzpark_Wiese.jpg?width=1200',
      district_at_point(16.3416, 48.2382)),
 
     (v_system_uid, 'Lainzer Tiergarten',
@@ -263,7 +263,7 @@ begin
      'other', 'de',
      ST_GeogFromText('SRID=4326;POINT(16.2436 48.1773)'),
      'approximate', 'Vienna',
-     'https://commons.wikimedia.org/wiki/Special:FilePath/Lainzer_Tiergarten.jpg?width=1200',
+     'https://commons.wikimedia.org/wiki/Special:FilePath/Torw%C3%A4rterhaus_%2875204%29_IMG_1471.jpg?width=1200',
      district_at_point(16.2436, 48.1773)),
 
     (v_system_uid, 'Prater',

@@ -45,6 +45,8 @@ export type PinWithCoordsRow = {
   city: string;
   photo_url: string | null;
   is_hidden: boolean;
+  /** Admin-marked "Geheimtipp" flag. Added by D-3 migration. */
+  is_special: boolean;
   created_at: string;
   lng: number;
   lat: number;
@@ -97,6 +99,7 @@ export type Database = {
           city: string;
           photo_url: string | null;
           is_hidden: boolean;
+          is_special: boolean;
           created_at: string;
           district_id: number | null;
         };
@@ -112,6 +115,7 @@ export type Database = {
           city?: string;
           photo_url?: string | null;
           is_hidden?: boolean;
+          is_special?: boolean;
           created_at?: string;
           district_id?: number | null;
         };
@@ -123,6 +127,7 @@ export type Database = {
           precision: Precision;
           photo_url: string | null;
           is_hidden: boolean;
+          is_special: boolean;
           district_id: number | null;
         }>;
         Relationships: [];

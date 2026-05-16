@@ -5,6 +5,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { signUpWithPassword, signInWithPassword } from "@/lib/auth/actions";
+import { checkPassword } from "@/lib/auth/password";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 import { track } from "@/lib/analytics/plausible";
 
 export type Mode = "signup" | "signin";
@@ -96,11 +98,16 @@ export function PasswordForm({ mode, nextPath = "/" }: PasswordFormProps) {
   const [pending, startTransition] = useTransition();
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Signup must pass the full complexity check (length + upper + lower
+  // + digit). Sign-in only needs length so users with legacy passwords
+  // shorter than current policy can still log in to change them.
+  const passwordCheck = checkPassword(password);
+  const passwordOk =
+    mode === "signup"
+      ? passwordCheck.ok
+      : password.length >= 12 && password.length <= 72;
   const canSubmit =
-    status !== "rate_limited" &&
-    email.length > 0 &&
-    password.length >= 12 &&
-    password.length <= 72;
+    status !== "rate_limited" && email.length > 0 && passwordOk;
 
   function handleInputChange() {
     if (status === "error") {
@@ -260,6 +267,9 @@ export function PasswordForm({ mode, nextPath = "/" }: PasswordFormProps) {
             )}
           </button>
         </div>
+        {mode === "signup" && password.length > 0 && (
+          <PasswordRequirements value={password} className="mt-1.5" />
+        )}
       </div>
 
       {(status === "error" || isRateLimited) && (

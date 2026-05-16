@@ -41,7 +41,7 @@ export function FilterBar() {
   }
 
   function clearAll() {
-    update({ categories: [], language: null, bezirk: null });
+    update({ categories: [], language: null });
   }
 
   const activeCount =

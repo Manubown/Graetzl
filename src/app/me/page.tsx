@@ -49,6 +49,24 @@ export default async function MePage() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Passwort</CardTitle>
+            <CardDescription>
+              Lege ein Passwort fest, falls du dich bisher nur per Magic-Link
+              angemeldet hast — oder ändere ein bestehendes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="w-full justify-between">
+              <Link href="/me/settings/password">
+                <span>Passwort verwalten</span>
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Erscheinungsbild</CardTitle>
             <CardDescription>
               Wähle hell, dunkel oder folge deinen Systemeinstellungen.
